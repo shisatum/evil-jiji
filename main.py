@@ -111,7 +111,6 @@ class JijiApp:
 
         self._load_memory()
         self.animate()
-        self.root.after(3000, self.agent_see)
 
     def _capture_screenshot(self, callback):
         self.root.withdraw()
@@ -786,6 +785,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
                        self._handle_normal_error, json_mode=True, timeout=120)
 
     def _process_clippy_response(self, result):
+        if not self.awake or self.is_agentic: return
         if SHOW_RAW_LLM_OUTPUT:
             print(f"\n--- RAW LLM OUTPUT (CLIPPY) ---\n{result}\n----------------------")
 
