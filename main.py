@@ -36,9 +36,7 @@ LOCAL_BASE_URL = "http://localhost:8000/v1"
 LOCAL_MODEL    = "llama3.2-vision"  # cosmetic label sent to the local server
 
 # Local fallback via Ollama (used when USE_GROQ = False and USE_LOCAL = False)
-# LLaVA works on 6-8GB VRAM cards (~4.5GB). Switch to llama3.2-vision once Ollama fixes support.
-# OR use Ollama version 0.24.0 which supports llama3.2-vision
-#OLLAMA_MODEL = "llava"
+# Requires Ollama v0.24.0 — llama3.2-vision is broken in 0.30.x+
 OLLAMA_MODEL = "llama3.2-vision"
 
 # Vision resolution for Clippy mode (left-click screen analysis)
@@ -110,10 +108,6 @@ class JijiApp:
         self.win_w = 280
 
         self.setup_window()
-
-        self.last_scale = 1.0
-        self.last_offset_x = 0
-        self.last_offset_y = 0
 
         self._load_memory()
         self.animate()
@@ -229,43 +223,19 @@ class JijiApp:
         small = img.resize((64, 64))
         return hashlib.md5(small.tobytes()).hexdigest()
 
-    def prepare_vision_payload(self, img, size=512, fmt="JPEG", quality=85):
-        """Letterboxes the image into a 1:1 square to preserve aspect ratio, preventing distortion/blur.
-
-        Clippy mode: size=512, JPEG (recognition only — no clicking needed, saves tokens).
-        Agentic mode: size=1024, PNG (precise UI element localization).
-        """
-        screen_w, screen_h = img.size
-        self.last_scale = size / max(screen_w, screen_h)
-        new_w = int(screen_w * self.last_scale)
-        new_h = int(screen_h * self.last_scale)
-
-        resized_img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        square_img = Image.new("RGB", (size, size), (0, 0, 0))
-
-        self.last_offset_x = (size - new_w) // 2
-        self.last_offset_y = (size - new_h) // 2
-        square_img.paste(resized_img, (self.last_offset_x, self.last_offset_y))
-
+    def prepare_vision_payload(self, img, fmt="JPEG", quality=85):
+        """Encodes a screenshot for the vision API at native resolution."""
         buffered = BytesIO()
         if fmt == "PNG":
-            square_img.save(buffered, format="PNG")
+            img.save(buffered, format="PNG")
         else:
-            square_img.save(buffered, format="JPEG", quality=quality)
+            img.save(buffered, format="JPEG", quality=quality)
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     def unmap_coordinates(self, rel_x, rel_y):
-        """Converts LLaVA's 0.0-1.0 square percentages back into true screen pixels."""
-        TARGET_SIZE = 768
-        sq_x = rel_x * TARGET_SIZE
-        sq_y = rel_y * TARGET_SIZE
-
-        img_x = sq_x - self.last_offset_x
-        img_y = sq_y - self.last_offset_y
-
-        tx = int(img_x / self.last_scale)
-        ty = int(img_y / self.last_scale)
-
+        """Converts 0.0-1.0 model coordinates to true screen pixels."""
+        tx = int(rel_x * self.screen_w)
+        ty = int(rel_y * self.screen_h)
         return max(0, min(self.screen_w - 1, tx)), max(0, min(self.screen_h - 1, ty))
 
     def get_raw_slice(self, col, row):
@@ -478,7 +448,7 @@ class JijiApp:
     def _continue_agentic_step(self, img):
         if not self.is_agentic: return
 
-        img_str = self.prepare_vision_payload(img, size=1024, fmt="PNG")
+        img_str = self.prepare_vision_payload(img, fmt="PNG")
 
         history_block = ""
         if self.action_history:
@@ -767,7 +737,6 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.change_state("idle", "Reading...")
         img_str = self.prepare_vision_payload(
             screenshot_image,
-            size=1024 if HIGH_RES_VISION else 512,
             fmt="PNG" if HIGH_RES_VISION else "JPEG"
         )
 

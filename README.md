@@ -34,7 +34,7 @@ Jiji supports three backends. Set the flags at the top of `main.py`:
 |---------|------|-------|
 | Local llama-cpp | `USE_LOCAL = True` | Runs fully offline on your GPU |
 | Groq (cloud) | `USE_GROQ = True` | Fast, free tier is plenty |
-| Ollama (local) | both `False` | Requires Ollama running locally |
+| Ollama (local) | both `False` | Requires Ollama v0.24.0 |
 
 ---
 
@@ -105,21 +105,7 @@ GROQ_API_KEY = "your-key-here"
 
 Leave both `USE_LOCAL` and `USE_GROQ` set to `False` (the default).
 
-### Option A — LLaVA (works on any Ollama version)
-
-1. Install Ollama from https://ollama.com
-2. Pull LLaVA:
-   ```bash
-   ollama pull llava
-   ```
-3. In `main.py`, set:
-   ```python
-   OLLAMA_MODEL = "llava"
-   ```
-
-### Option B — Llama 3.2 Vision (requires Ollama v0.24.0)
-
-Llama 3.2 Vision is broken in Ollama 0.30.x due to a regression in mllama architecture support. Roll back to v0.24.0 to use it.
+Requires **Ollama v0.24.0** — llama3.2-vision is broken in Ollama 0.30.x.
 
 1. **Uninstall your current Ollama** via Windows Settings → Apps → Ollama → Uninstall.  
    Your pulled models in `C:\Users\<you>\.ollama\models` will survive.
@@ -133,7 +119,7 @@ Llama 3.2 Vision is broken in Ollama 0.30.x due to a regression in mllama archit
    ollama pull llama3.2-vision
    ```
 
-4. In `main.py`, set:
+4. In `main.py`, confirm:
    ```python
    OLLAMA_MODEL = "llama3.2-vision"
    ```
