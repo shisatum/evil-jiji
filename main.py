@@ -102,8 +102,8 @@ pyautogui.FAILSAFE = True
 
 _tray_icon = None
 
-def nuke_process():
-    print(f"\n[KILLSWITCH] Jiji has been vaporized.")
+def nuke_process(reason="ESC"):
+    print(f"\n[KILLSWITCH] Jiji has been vaporized. (reason: {reason})")
     print(f"[END]   {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     if _tray_icon is not None:
         try:
@@ -1239,7 +1239,7 @@ def create_jiji():
     tray_menu = pystray.Menu(
         pystray.MenuItem("Settings", lambda icon, item: root.after(0, lambda: SettingsWindow(root, load_settings()))),
         pystray.MenuItem("Show/Hide Log", toggle_console, default=True),
-        pystray.MenuItem("Quit Jiji", lambda icon, item: root.after(0, nuke_process)),
+        pystray.MenuItem("Quit Jiji", lambda icon, item: root.after(0, lambda: nuke_process("systray"))),
     )
     global _tray_icon
     tray_icon = pystray.Icon("Jiji", _make_tray_icon_image(), "Jiji", tray_menu)
