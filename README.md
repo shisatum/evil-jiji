@@ -23,7 +23,7 @@ python --version
 ### 2. Install dependencies
 
 ```bash
-pip install pillow mss pyautogui requests keyboard numpy
+pip install pillow mss pyautogui requests keyboard numpy pystray
 ```
 
 ### Choosing a vision backend

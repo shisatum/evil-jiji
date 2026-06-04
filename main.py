@@ -1,6 +1,8 @@
 # Jiji v1.24
 import tkinter as tk
 import keyboard
+import ctypes
+import pystray
 import numpy as np
 import os
 import datetime
@@ -869,11 +871,37 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.is_idling = True
         self.change_state("sleep", "*Fine. Sleeping.*")
 
+def _make_tray_icon_image():
+    """Crop top-left of sprites.png for the tray icon; fall back to a dark square."""
+    try:
+        sheet = Image.open("sprites.png").convert("RGBA")
+        return sheet.crop((0, 0, 64, 64)).resize((32, 32), Image.LANCZOS)
+    except Exception:
+        return Image.new("RGBA", (32, 32), (20, 20, 20, 255))
+
 def create_jiji():
     print("Jiji V1.24 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+
+    # Hide the console window at startup
+    hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+    ctypes.windll.user32.ShowWindow(hwnd, 0)  # SW_HIDE
+
     root = tk.Tk()
     app = JijiApp(root)
     keyboard.add_hotkey('esc', lambda: _handle_esc(app))
+
+    # System tray icon
+    def toggle_console():
+        visible = ctypes.windll.user32.IsWindowVisible(hwnd)
+        ctypes.windll.user32.ShowWindow(hwnd, 0 if visible else 5)
+
+    tray_menu = pystray.Menu(
+        pystray.MenuItem("Show/Hide Log", toggle_console, default=True),
+        pystray.MenuItem("Quit Jiji", nuke_process),
+    )
+    tray_icon = pystray.Icon("Jiji", _make_tray_icon_image(), "Jiji", tray_menu)
+    threading.Thread(target=tray_icon.run, daemon=True).start()
+
     root.mainloop()
 
 if __name__ == "__main__":
