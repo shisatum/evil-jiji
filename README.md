@@ -9,10 +9,21 @@ An agentic desktop pet that watches your screen and offers sardonic help. Powere
 
 ## Setup
 
-### Dependencies
+### 1. Install Python 3
+
+Download and install Python 3.10 or newer from https://www.python.org/downloads/
+
+> ⚠️ During installation, check **"Add Python to PATH"** before clicking Install.
+
+Verify it worked by opening a terminal and running:
+```bash
+python --version
+```
+
+### 2. Install dependencies
 
 ```bash
-pip install pillow mss pyautogui requests
+pip install pillow mss pyautogui requests keyboard numpy
 ```
 
 ### Choosing a vision backend
