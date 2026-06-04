@@ -121,6 +121,8 @@ In the **Settings menu** (system tray → Settings → Backend), select **Local 
 python main.py
 ```
 
+Or just double-click `main.py` in File Explorer.
+
 - **Left-click** Jiji to trigger a screen comment
 - **Right-click** Jiji to give it a task or ask a question
 - **Esc** cancels the current task (press again to quit)
