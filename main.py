@@ -984,7 +984,7 @@ class SettingsWindow:
         self.win.title("Jiji Settings")
         self.win.configure(bg=self.BG)
         self.win.resizable(False, False)
-        self.win.geometry("580x360")
+        self.win.geometry("660x420")
         self.win.grab_set()
 
         # Widget vars (created once, shared across panels)
@@ -1001,6 +1001,16 @@ class SettingsWindow:
         self._show("General")
 
     def _build(self):
+        # Bottom bar — must be packed BEFORE the expanding panel
+        bar = tk.Frame(self.win, bg=self.BG, pady=6)
+        bar.pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(bar, text="Cancel", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
+                  relief=tk.FLAT, padx=10, command=self.win.destroy).pack(side=tk.RIGHT, padx=6)
+        tk.Button(bar, text="OK", font=self.FONT, fg=self.FG, bg=self.ACCENT,
+                  relief=tk.FLAT, padx=10, command=self._ok).pack(side=tk.RIGHT, padx=2)
+        tk.Button(bar, text="Apply", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
+                  relief=tk.FLAT, padx=10, command=self._apply).pack(side=tk.RIGHT, padx=2)
+
         # Left nav
         self.nav = tk.Frame(self.win, bg=self.BG_NAV, width=130)
         self.nav.pack(side=tk.LEFT, fill=tk.Y)
@@ -1014,19 +1024,9 @@ class SettingsWindow:
             b.pack(fill=tk.X, pady=1)
             self._nav_btns[cat] = b
 
-        # Right panel
+        # Right panel — packed last so it fills remaining space
         self.panel = tk.Frame(self.win, bg=self.BG)
         self.panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Bottom bar
-        bar = tk.Frame(self.win, bg=self.BG, pady=6)
-        bar.pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(bar, text="Cancel", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
-                  relief=tk.FLAT, padx=10, command=self.win.destroy).pack(side=tk.RIGHT, padx=6)
-        tk.Button(bar, text="OK", font=self.FONT, fg=self.FG, bg=self.ACCENT,
-                  relief=tk.FLAT, padx=10, command=self._ok).pack(side=tk.RIGHT, padx=2)
-        tk.Button(bar, text="Apply", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
-                  relief=tk.FLAT, padx=10, command=self._apply).pack(side=tk.RIGHT, padx=2)
 
     def _clear_panel(self):
         for w in self.panel.winfo_children():
