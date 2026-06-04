@@ -26,84 +26,21 @@ python --version
 pip install pillow mss pyautogui requests keyboard numpy pystray
 ```
 
-### Choosing a vision backend
+### 3. Choose a vision backend
 
-Jiji supports three backends. Set the flags at the top of `main.py`:
+Jiji supports three backends, configurable via the **system tray icon → Settings**:
 
-| Backend | Flag | Notes |
-|---------|------|-------|
-| Local llama-cpp | `USE_LOCAL = True` | Runs fully offline on your GPU |
-| Groq (cloud) | `USE_GROQ = True` | Fast, free tier is plenty |
-| Ollama (local) | both `False` | Requires Ollama v0.24.0 |
-
----
-
-## Local model setup (llama-cpp-python)
-
-> [!WARNING]
-> **The local llama-cpp-python method does not currently work with Llama 3.2 Vision.** The mllama architecture is broken in recent llama.cpp releases. Preferred alternatives:
-> - **Groq** (cloud, free tier) — fastest and most reliable
-> - **Ollama v0.24.0 + llama3.2-vision** — best local quality
-> - **Ollama (any version) + LLaVA** — easiest local setup
-
-This will be the recommended offline path once the mllama regression is fixed upstream.
-
-### 1. Download the model
-
-Get the **Q4_K_M** quant (~6 GB) from HuggingFace — it's the only quant that fits in 8 GB VRAM:
-
-👉 https://huggingface.co/leafspark/Llama-3.2-11B-Vision-Instruct-GGUF
-
-Download: `Llama-3.2-11B-Vision-Instruct-Q4_K_M.gguf`
-
-### 2. Install llama-cpp-python with CUDA support
-
-```bash
-pip install "llama-cpp-python[server]" --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
-```
-
-> For a different CUDA version, replace `cu121` with `cu118`, `cu124`, etc. to match your driver.  
-> Check your CUDA version with: `nvcc --version`
-
-### 3. Start the server
-
-```bash
-python -m llama_cpp.server \
-  --model "C:\path\to\Llama-3.2-11B-Vision-Instruct-Q4_K_M.gguf" \
-  --n_gpu_layers -1 \
-  --n_ctx 4096 \
-  --port 8000
-```
-
-- `--n_gpu_layers -1` offloads all layers to GPU (fastest)
-- `--n_ctx 4096` sets the context window (increase to 8192 if you have headroom)
-- Keep this terminal open while Jiji is running
-
-### 4. Enable local mode in Jiji
-
-At the top of `main.py`, set:
-
-```python
-USE_LOCAL = True
-```
+| # | Backend | Notes |
+|---|---------|-------|
+| 1 | **Ollama v0.24.0** (recommended) | Best local quality, runs fully offline |
+| 2 | **Groq** (cloud) | Fast, free tier is plenty |
+| 3 | **Local llama-cpp** | Offline, but currently broken — see warning below |
 
 ---
 
-## Groq setup (cloud)
+## Backend 1 — Ollama with Llama 3.2 Vision (recommended)
 
-1. Get a free API key at https://console.groq.com
-2. Set at the top of `main.py`:
-
-```python
-USE_GROQ    = True
-GROQ_API_KEY = "your-key-here"
-```
-
----
-
-## Ollama setup (local)
-
-Leave both `USE_LOCAL` and `USE_GROQ` set to `False` (the default).
+The best balance of quality and simplicity for local use.
 
 Requires **Ollama v0.24.0** — llama3.2-vision is broken in Ollama 0.30.x.
 
@@ -119,12 +56,62 @@ Requires **Ollama v0.24.0** — llama3.2-vision is broken in Ollama 0.30.x.
    ollama pull llama3.2-vision
    ```
 
-4. In `main.py`, confirm:
-   ```python
-   OLLAMA_MODEL = "llama3.2-vision"
-   ```
+4. In the **Settings menu** (system tray → Settings → Backend), select **Ollama**.
 
 > **Tip:** Ollama auto-updates in the background. To stay on v0.24.0, dismiss any "Update available" prompts.
+
+---
+
+## Backend 2 — Groq (cloud)
+
+Fast cloud inference with a generous free tier. Requires an internet connection.
+
+1. Get a free API key at https://console.groq.com
+2. In the **Settings menu** (system tray → Settings), select **Groq** as the backend and paste your API key.
+
+---
+
+## Backend 3 — Local llama-cpp-python
+
+> [!WARNING]
+> **This backend does not currently work with Llama 3.2 Vision.** The mllama architecture is broken in recent llama.cpp releases. Use Ollama v0.24.0 or Groq instead.
+>
+> This will be the recommended fully-offline path once the upstream regression is fixed.
+
+For when it does work:
+
+### 1. Download the model
+
+Get the **Q4_K_M** quant (~6 GB) from HuggingFace — the only quant that fits in 8 GB VRAM:
+
+👉 https://huggingface.co/leafspark/Llama-3.2-11B-Vision-Instruct-GGUF
+
+Download: `Llama-3.2-11B-Vision-Instruct-Q4_K_M.gguf`
+
+### 2. Install llama-cpp-python with CUDA support
+
+```bash
+pip install "llama-cpp-python[server]" --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+```
+
+> For a different CUDA version, replace `cu121` with `cu118`, `cu124`, etc.  
+> Check your version with: `nvcc --version`
+
+### 3. Start the server
+
+```bash
+python -m llama_cpp.server \
+  --model "C:\path\to\Llama-3.2-11B-Vision-Instruct-Q4_K_M.gguf" \
+  --n_gpu_layers -1 \
+  --n_ctx 4096 \
+  --port 8000
+```
+
+Keep this terminal open while Jiji is running.
+
+### 4. Select Local in Settings
+
+In the **Settings menu** (system tray → Settings → Backend), select **Local llama-cpp**.
 
 ---
 
@@ -135,6 +122,7 @@ python main.py
 ```
 
 - **Left-click** Jiji to trigger a screen comment
-- **Right-click** Jiji to give it a desktop task
+- **Right-click** Jiji to give it a task or ask a question
 - **Esc** cancels the current task (press again to quit)
+- **System tray icon** → Settings to configure the backend and other options
 - Jiji can be dragged anywhere on screen
