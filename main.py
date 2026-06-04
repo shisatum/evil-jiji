@@ -48,8 +48,15 @@ MEMORY_FILE = "jiji_memory.json"  # persists Jiji's recent comments across sessi
 
 pyautogui.FAILSAFE = True
 
+_tray_icon = None
+
 def nuke_process():
     print("\n[KILLSWITCH] Jiji has been vaporized.")
+    if _tray_icon is not None:
+        try:
+            _tray_icon.stop()
+        except Exception:
+            pass
     os._exit(0)
 
 def _handle_esc(app):
@@ -938,7 +945,9 @@ def create_jiji():
         pystray.MenuItem("Show/Hide Log", toggle_console, default=True),
         pystray.MenuItem("Quit Jiji", nuke_process),
     )
+    global _tray_icon
     tray_icon = pystray.Icon("Jiji", _make_tray_icon_image(), "Jiji", tray_menu)
+    _tray_icon = tray_icon
     threading.Thread(target=tray_icon.run, daemon=True).start()
 
     root.mainloop()
