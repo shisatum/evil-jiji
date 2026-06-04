@@ -86,14 +86,42 @@ GROQ_API_KEY = "your-key-here"
 
 ## Ollama setup (local)
 
+Leave both `USE_LOCAL` and `USE_GROQ` set to `False` (the default).
+
+### Option A — LLaVA (works on any Ollama version)
+
 1. Install Ollama from https://ollama.com
-2. Pull a vision model:
+2. Pull LLaVA:
    ```bash
    ollama pull llava
    ```
-3. Leave both `USE_LOCAL` and `USE_GROQ` set to `False`
+3. In `main.py`, set:
+   ```python
+   OLLAMA_MODEL = "llava"
+   ```
 
-> **Note:** llama3.2-vision is broken in Ollama 0.30.4+. Use llava, or roll back to Ollama v0.24.0 for llama3.2-vision support.
+### Option B — Llama 3.2 Vision (requires Ollama v0.24.0)
+
+Llama 3.2 Vision is broken in Ollama 0.30.x due to a regression in mllama architecture support. Roll back to v0.24.0 to use it.
+
+1. **Uninstall your current Ollama** via Windows Settings → Apps → Ollama → Uninstall.  
+   Your pulled models in `C:\Users\<you>\.ollama\models` will survive.
+
+2. **Download the v0.24.0 installer:**  
+   👉 https://github.com/ollama/ollama/releases/tag/v0.24.0  
+   Grab `OllamaSetup.exe` and run it.
+
+3. **Pull the model:**
+   ```bash
+   ollama pull llama3.2-vision
+   ```
+
+4. In `main.py`, set:
+   ```python
+   OLLAMA_MODEL = "llama3.2-vision"
+   ```
+
+> **Tip:** Ollama auto-updates in the background. To stay on v0.24.0, dismiss any "Update available" prompts.
 
 ---
 

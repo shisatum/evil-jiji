@@ -35,7 +35,9 @@ LOCAL_MODEL    = "llama3.2-vision"  # cosmetic label sent to the local server
 
 # Local fallback via Ollama (used when USE_GROQ = False and USE_LOCAL = False)
 # LLaVA works on 6-8GB VRAM cards (~4.5GB). Switch to llama3.2-vision once Ollama fixes support.
-OLLAMA_MODEL = "llava"
+# OR use Ollama version 0.24.0 which supports llama3.2-vision
+#OLLAMA_MODEL = "llava"
+OLLAMA_MODEL = "llama3.2-vision"
 
 MEMORY_FILE = "jiji_memory.json"  # persists Jiji's recent comments across sessions
 
@@ -476,9 +478,22 @@ class JijiApp:
             lines = "\n".join(f"  {i+1}. {a}" for i, a in enumerate(self.action_history[-8:]))
             history_block = f"\nActions already completed:\n{lines}\n"
 
+        # Loop detection: warn if any action appears 3+ times in recent history
+        loop_warning = ""
+        if len(self.action_history) >= 3:
+            from collections import Counter
+            counts = Counter(self.action_history[-8:])
+            repeated = [(a, n) for a, n in counts.items() if n >= 3]
+            if repeated:
+                worst = max(repeated, key=lambda x: x[1])
+                loop_warning = (
+                    f"\n⚠️ LOOP DETECTED: You have done '{worst[0]}' {worst[1]} times already. "
+                    f"This is NOT working. Do NOT repeat it. Try a completely different approach to complete the task.\n"
+                )
+
         prompt = f"""You are a desktop automation agent completing a task one step at a time.
 Task: "{self.agentic_task}"
-{history_block}
+{history_block}{loop_warning}
 Study the screenshot and output the single best NEXT action as a JSON object.
 
 STRATEGIES:
@@ -756,8 +771,8 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
 
         memory_note = ""
         if self.recent_comments:
-            past = "\n".join(f'- "{c}"' for c in self.recent_comments[-5:])
-            memory_note = f"Things you have already said recently (do not repeat these topics):\n{past}\n"
+            past = "\n".join(f'- "{c}"' for c in self.recent_comments)
+            memory_note = f"You have already said all of these recently. Do NOT repeat any of them, word for word or in substance:\n{past}\n"
 
         prompt = (
             "You are Jiji, the sardonic black cat from Kiki's Delivery Service. "
@@ -788,7 +803,15 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             data = {"comment": result.strip().strip('"'), "offer": None}
 
         comment = str(data.get("comment", "")).strip().strip('"').strip("'")
-        self._save_to_memory(comment)
+
+        # Hard dedup: if the LLM repeated a saved comment anyway, don't re-save it
+        def _norm(s):
+            import re
+            return re.sub(r'[^a-z0-9]', '', s.lower())
+        if any(_norm(comment) == _norm(c) for c in self.recent_comments):
+            print(f"[MEMORY] Duplicate comment detected, skipping save: \"{comment}\"")
+        else:
+            self._save_to_memory(comment)
         offer = data.get("offer")
         if not isinstance(offer, str) or offer.strip().lower() in ("null", "none", ""):
             offer = None
