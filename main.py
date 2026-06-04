@@ -26,7 +26,14 @@ USE_GROQ = False
 GROQ_API_KEY = ""
 GROQ_MODEL   = "meta-llama/llama-4-scout-17b-16e-instruct"  # or "llama-3.2-90b-vision-preview" for more reasoning
 
-# Local fallback via Ollama (used when USE_GROQ = False)
+# Local llama-cpp-python server (highest priority when USE_LOCAL = True)
+# Run: python -m llama_cpp.server --model <path>.gguf --n_gpu_layers -1 --n_ctx 4096 --port 8000
+# Recommended model: leafspark/Llama-3.2-11B-Vision-Instruct-GGUF  Q4_K_M (~6 GB, fits GTX 1070)
+USE_LOCAL      = False
+LOCAL_BASE_URL = "http://localhost:8000/v1"
+LOCAL_MODEL    = "llama3.2-vision"  # cosmetic label sent to the local server
+
+# Local fallback via Ollama (used when USE_GROQ = False and USE_LOCAL = False)
 # LLaVA works on 6-8GB VRAM cards (~4.5GB). Switch to llama3.2-vision once Ollama fixes support.
 OLLAMA_MODEL = "llava"
 
@@ -115,8 +122,21 @@ class JijiApp:
         callback(img)
 
     def _call_api(self, prompt, img_str, on_result, on_error, json_mode=False, timeout=60, mime="image/jpeg"):
-        """Unified vision API call — routes to Groq or local Ollama based on config."""
-        if USE_GROQ:
+        """Unified vision API call — routes to local llama-cpp server, Groq, or Ollama based on config."""
+        if USE_LOCAL:
+            payload = {
+                "model": LOCAL_MODEL,
+                "messages": [{"role": "user", "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_str}"}}
+                ]}],
+                "stream": False
+            }
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            headers = {"Content-Type": "application/json"}
+            url = f"{LOCAL_BASE_URL}/chat/completions"
+        elif USE_GROQ:
             content = [
                 {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_str}"}}
@@ -145,7 +165,7 @@ class JijiApp:
         def _fetch():
             try:
                 response = requests.post(url, json=payload, headers=headers, timeout=timeout)
-                if USE_GROQ:
+                if USE_LOCAL or USE_GROQ:
                     resp_json = response.json()
                     if "choices" not in resp_json:
                         err = resp_json.get("error", {})
