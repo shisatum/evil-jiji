@@ -82,6 +82,7 @@ class JijiApp:
         self.awaiting_input = False
         self.awaiting_offer = False
         self.pending_offer = ""
+        self.pending_offer_task = ""
         self.recent_comments = []
         self.last_screenshot_hash = ""
 
@@ -778,8 +779,10 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             "If you make an offer, phrase it in Jiji's reluctant, sardonic voice "
             "(e.g. 'I could open that for you. If you insist.' or "
             "'Want me to save that? Before you lose it.'). "
+            "Also include a clear, imperative offer_task for an automation agent "
+            "(e.g. 'Open Spotify', 'Save the current file', 'Open YouTube in Chrome'). "
             'Respond with ONLY a JSON object: '
-            '{"comment": "your remark", "offer": "sardonic offer, or null"}'
+            '{"comment": "your remark", "offer": "sardonic offer, or null", "offer_task": "imperative task, or null"}'
         )
         self._call_api(prompt, img_str, self._process_clippy_response,
                        self._handle_normal_error, json_mode=True, timeout=120)
@@ -809,8 +812,13 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         if not isinstance(offer, str) or offer.strip().lower() in ("null", "none", ""):
             offer = None
 
+        offer_task = data.get("offer_task")
+        if not isinstance(offer_task, str) or offer_task.strip().lower() in ("null", "none", ""):
+            offer_task = offer  # fall back to offer text if offer_task missing
+
         self.is_idling = True
         self.pending_offer = offer or ""
+        self.pending_offer_task = offer_task or ""
         self.change_state("sit_up", f'"{comment}"')
 
         if offer:
@@ -846,8 +854,9 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
     def action_approved(self):
         self.awaiting_offer = False
         self.btn_frame.pack_forget()
-        task = self.pending_offer
+        task = self.pending_offer_task or self.pending_offer
         self.pending_offer = ""
+        self.pending_offer_task = ""
         self.is_agentic = True
         self.last_agentic_action = None
         self.action_history = []
