@@ -40,7 +40,13 @@ Jiji supports three backends. Set the flags at the top of `main.py`:
 
 ## Local model setup (llama-cpp-python)
 
-This is the recommended path for running fully offline on a GPU with 6–8 GB VRAM.
+> [!WARNING]
+> **The local llama-cpp-python method does not currently work with Llama 3.2 Vision.** The mllama architecture is broken in recent llama.cpp releases. Preferred alternatives:
+> - **Groq** (cloud, free tier) — fastest and most reliable
+> - **Ollama v0.24.0 + llama3.2-vision** — best local quality
+> - **Ollama (any version) + LLaVA** — easiest local setup
+
+This will be the recommended offline path once the mllama regression is fixed upstream.
 
 ### 1. Download the model
 
