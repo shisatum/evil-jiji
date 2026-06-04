@@ -125,7 +125,7 @@ class JijiApp:
         self.root.deiconify()
         callback(img)
 
-    def _call_api(self, prompt, img_str, on_result, on_error, json_mode=False, timeout=60, mime="image/jpeg"):
+    def _call_api(self, prompt, img_str, on_result, on_error, json_mode=False, timeout=120, mime="image/jpeg"):
         """Unified vision API call — routes to local llama-cpp server, Groq, or Ollama based on config."""
         if USE_LOCAL:
             payload = {
@@ -514,7 +514,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
   {{"thought": "...", "action": "done"}}"""
 
         self._call_api(prompt, img_str, self._process_agentic_response, self._handle_agentic_error,
-                       json_mode=True, timeout=60, mime="image/png")
+                       json_mode=True, timeout=120, mime="image/png")
 
     def _process_agentic_response(self, result):
         if SHOW_RAW_LLM_OUTPUT:
