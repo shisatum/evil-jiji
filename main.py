@@ -827,7 +827,8 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             "If you make an offer, phrase it in Jiji's reluctant, sardonic voice "
             "and name the specific app or thing — never say 'that'. "
             "(e.g. 'I could open Spotify for you. If you insist.' or "
-            "'Want me to save that file? Before you lose it.'). "
+            "'Want me to save that file? Before you lose it.' or "
+            "'I could close Discord for you. Since you clearly can\\'t.'). "
             "Also include a clear, imperative offer_task for an automation agent "
             "(e.g. 'Open Spotify', 'Save the current file', 'Open YouTube in Chrome'). "
             'Respond with ONLY a JSON object: '
