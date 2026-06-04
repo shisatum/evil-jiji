@@ -103,7 +103,8 @@ pyautogui.FAILSAFE = True
 _tray_icon = None
 
 def nuke_process():
-    print("\n[KILLSWITCH] Jiji has been vaporized.")
+    print(f"\n[KILLSWITCH] Jiji has been vaporized.")
+    print(f"[END]   {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     if _tray_icon is not None:
         try:
             _tray_icon.stop()
@@ -1209,11 +1210,14 @@ class _Tee:
 
 
 def create_jiji():
-    # Mirror stdout and stderr to console.log (overwritten each run)
-    _log = open("console.log", "w", encoding="utf-8")
+    # Append all console output to console.log
+    _log = open("console.log", "a", encoding="utf-8")
     sys.stdout = _Tee(sys.stdout, _log)
     sys.stderr = _Tee(sys.stderr, _log)
 
+    print(f"\n{'='*50}")
+    print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*50}")
     print("Jiji V1.24 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
