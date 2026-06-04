@@ -1,4 +1,4 @@
-# Jiji v1.24
+# Jiji v1.25
 import tkinter as tk
 import keyboard
 import ctypes
@@ -474,27 +474,29 @@ class JijiApp:
 
         self.dialogue.pack_forget()
 
-        self.task_entry = tk.Entry(self.frame, width=25, bg="#333333", fg="white",
-                                   font=("Courier", 10), borderwidth=0, insertbackground="white")
+        self.task_entry = tk.Text(self.frame, width=25, height=3, bg="#333333", fg="white",
+                                  font=("Courier", 10), borderwidth=0, insertbackground="white",
+                                  wrap=tk.WORD)
         self.task_entry.pack(pady=5)
         self.task_entry.focus_set()
         self.task_entry.bind("<Return>", self.start_agentic_mode)
 
     def start_agentic_mode(self, event):
         self.awaiting_input = False
-        user_input = self.task_entry.get()
+        user_input = self.task_entry.get("1.0", "end-1c").strip()
         self.task_entry.destroy()
         self.dialogue.pack(pady=5)
 
-        if not user_input.strip():
+        if not user_input:
             self.awake = False
             self.is_idling = True
             self.change_state("sleep", "*Nevermind*")
-            return
+            return "break"
 
         self.agentic_task = user_input
         self.change_state("idle", "Thinking...")
         self._capture_screenshot(lambda img: self._classify_input(img, user_input))
+        return "break"  # suppress tk.Text default newline insertion on Enter
 
     def _classify_input(self, img, user_input):
         img_str = self.prepare_vision_payload(img, fmt="PNG")
@@ -1207,7 +1209,7 @@ def create_jiji():
     print(f"\n{'='*50}")
     print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
-    print("Jiji V1.24 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+    print("Jiji V1.25 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
     apply_settings(load_settings())
