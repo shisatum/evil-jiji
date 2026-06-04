@@ -41,6 +41,11 @@ LOCAL_MODEL    = "llama3.2-vision"  # cosmetic label sent to the local server
 #OLLAMA_MODEL = "llava"
 OLLAMA_MODEL = "llama3.2-vision"
 
+# Vision resolution for Clippy mode (left-click screen analysis)
+# True  → 1024px PNG  (sharper, recommended for local models)
+# False → 512px JPEG  (faster, lower token cost for Groq/cloud)
+HIGH_RES_VISION = True
+
 MEMORY_FILE = "jiji_memory.json"  # persists Jiji's recent comments across sessions
 
 pyautogui.FAILSAFE = True
@@ -760,7 +765,11 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
 
     def agent_think(self, screenshot_image):
         self.change_state("idle", "Reading...")
-        img_str = self.prepare_vision_payload(screenshot_image)
+        img_str = self.prepare_vision_payload(
+            screenshot_image,
+            size=1024 if HIGH_RES_VISION else 512,
+            fmt="PNG" if HIGH_RES_VISION else "JPEG"
+        )
 
         now = datetime.datetime.now()
         time_str = now.strftime("%I:%M %p").lstrip("0")
