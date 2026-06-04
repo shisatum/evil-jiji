@@ -468,10 +468,14 @@ class JijiApp:
                     f"This is NOT working. Do NOT repeat it. Try a completely different approach to complete the task.\n"
                 )
 
-        # Nudge: if the last action was win+r and no type has followed, force a type next
+        # Nudge: guide the model through the win+r → type → enter sequence step by step
         type_nudge = ""
-        if self.action_history and self.action_history[-1] == "press_key 'win+r'":
-            type_nudge = "\n⚠️ You just opened the Run dialog. Your ONLY valid next action is: type the application name. Do NOT press win+r again.\n"
+        if self.action_history:
+            last = self.action_history[-1]
+            if last == "press_key 'win+r'":
+                type_nudge = "\n⚠️ You just opened the Run dialog. Your ONLY valid next action is: type the application name. Do NOT press win+r again.\n"
+            elif last.startswith("type '") and len(self.action_history) >= 2 and self.action_history[-2] == "press_key 'win+r'":
+                type_nudge = "\n⚠️ You just typed in the Run dialog. Your ONLY valid next action is: press_key 'enter' to launch it. Do NOT press win+r again.\n"
 
         prompt = f"""You are a desktop automation agent. You are NOT a character — do not use any personality or voice in the "thought" field; use it only for brief task reasoning.
 Task: "{self.agentic_task}"
