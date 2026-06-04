@@ -875,7 +875,7 @@ def _make_tray_icon_image():
     """Crop top-left of sprites.png for the tray icon; fall back to a dark square."""
     try:
         sheet = Image.open("sprites.png").convert("RGBA")
-        return sheet.crop((0, 0, 64, 64)).resize((32, 32), Image.LANCZOS)
+        return sheet.crop((0, 0, 32, 32)).resize((32, 32), Image.LANCZOS)
     except Exception:
         return Image.new("RGBA", (32, 32), (20, 20, 20, 255))
 
