@@ -792,7 +792,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             '{"comment": "your remark", "offer": "sardonic offer, or null"}'
         )
         self._call_api(prompt, img_str, self._process_clippy_response,
-                       self._handle_normal_error, json_mode=True, timeout=20)
+                       self._handle_normal_error, json_mode=True, timeout=120)
 
     def _process_clippy_response(self, result):
         if SHOW_RAW_LLM_OUTPUT:
@@ -875,7 +875,7 @@ def _make_tray_icon_image():
     """Crop top-left of sprites.png for the tray icon; fall back to a dark square."""
     try:
         sheet = Image.open("sprites.png").convert("RGBA")
-        return sheet.crop((0, 0, 32, 32)).resize((32, 32), Image.LANCZOS)
+        return sheet.crop((0, 0, 32, 32)).resize((32, 32), Image.Resampling.LANCZOS)
     except Exception:
         return Image.new("RGBA", (32, 32), (20, 20, 20, 255))
 
