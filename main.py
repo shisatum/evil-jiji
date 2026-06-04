@@ -476,6 +476,10 @@ class JijiApp:
                 type_nudge = "\n⚠️ You just opened the Run dialog. Your ONLY valid next action is: type the application name. Do NOT press win+r again.\n"
             elif last.startswith("type '") and len(self.action_history) >= 2 and self.action_history[-2] == "press_key 'win+r'":
                 type_nudge = "\n⚠️ You just typed in the Run dialog. Your ONLY valid next action is: press_key 'enter' to launch it. Do NOT press win+r again.\n"
+            elif (last == "press_key 'enter'" and len(self.action_history) >= 3
+                  and self.action_history[-2].startswith("type '")
+                  and self.action_history[-3] == "press_key 'win+r'"):
+                type_nudge = "\n⚠️ You just launched an application from the Run dialog. Check the screenshot — if it is now open, output 'done' immediately. Do NOT press win+r again.\n"
 
         prompt = f"""You are a desktop automation agent. You are NOT a character — do not use any personality or voice in the "thought" field; use it only for brief task reasoning.
 Task: "{self.agentic_task}"
@@ -717,7 +721,9 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
                 pyautogui.press(key)
             self.action_history.append(f"press_key '{key}'")
 
-            self.root.after(1000, self.agentic_step)
+            # Give apps extra time to appear after Enter; 1s for other keys
+            delay = 3000 if key == "enter" else 1000
+            self.root.after(delay, self.agentic_step)
 
         elif action == "done":
             self.change_state("sit_up", "Task complete!")
