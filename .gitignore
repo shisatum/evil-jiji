@@ -1,0 +1,11 @@
+# Personal/testing files
+main_testing.py
+old_versions/
+jiji_memory.json
+todo.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
