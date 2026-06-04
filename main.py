@@ -1095,9 +1095,9 @@ class SettingsWindow:
 
         elif category == "Vision":
             self._label(p, "Vision", dim=True)
-            self._check(p, "High-res screenshots (1024px PNG) for Clippy mode", self.high_res_var)
+            self._check(p, "Use PNG screenshots for Clippy mode", self.high_res_var)
             self._label(p,
-                "Off = 512px JPEG — faster, lower token cost for cloud backends", dim=True)
+                "On = PNG (lossless). Off = JPEG (faster, lower token cost for cloud backends)", dim=True)
 
     def _collect(self):
         return {
