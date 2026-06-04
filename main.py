@@ -17,6 +17,7 @@ import math
 import re
 import threading
 import time
+import sys
 from io import BytesIO
 from PIL import Image, ImageTk
 
@@ -1188,7 +1189,31 @@ def _make_tray_icon_image():
     except Exception:
         return Image.new("RGBA", (32, 32), (20, 20, 20, 255))
 
+class _Tee:
+    """Mirrors writes to both an original stream and a log file."""
+    def __init__(self, original, log_file):
+        self.original = original
+        self.log_file = log_file
+
+    def write(self, data):
+        self.original.write(data)
+        self.log_file.write(data)
+        self.log_file.flush()
+
+    def flush(self):
+        self.original.flush()
+        self.log_file.flush()
+
+    def isatty(self):
+        return False
+
+
 def create_jiji():
+    # Mirror stdout and stderr to console.log (overwritten each run)
+    _log = open("console.log", "w", encoding="utf-8")
+    sys.stdout = _Tee(sys.stdout, _log)
+    sys.stderr = _Tee(sys.stderr, _log)
+
     print("Jiji V1.24 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
