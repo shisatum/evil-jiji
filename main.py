@@ -945,7 +945,7 @@ def create_jiji():
 
     tray_menu = pystray.Menu(
         pystray.MenuItem("Show/Hide Log", toggle_console, default=True),
-        pystray.MenuItem("Quit Jiji", nuke_process),
+        pystray.MenuItem("Quit Jiji", lambda icon, item: root.after(0, nuke_process)),
     )
     global _tray_icon
     tray_icon = pystray.Icon("Jiji", _make_tray_icon_image(), "Jiji", tray_menu)
