@@ -474,9 +474,11 @@ Task: "{self.agentic_task}"
 Study the screenshot and output the single best NEXT action as a JSON object.
 
 STRATEGIES:
-- To open an app not visible on screen: press_key "win+r", type its executable name (notepad, calc, mspaint, cmd...), then press_key "enter"
-- Always click a text input field before typing into it — look for a search bar, address bar, or text box (usually near the top of the window)
-- To search in a browser, click the address bar at the very top of the window first; to search in Spotify or similar apps, click the search bar near the top
+- To open an app: press_key "win+r" → type executable name (notepad, calc, chrome, cmd...) → press_key "enter"
+- If the Run dialog is open AND the action history shows you already typed into it, press_key "enter" immediately — do NOT type again
+- If a text field already contains the correct text (check history), press "enter" — do NOT retype it
+- Always click a text input field before typing into it — look for a search bar, address bar, or text box
+- To search in a browser, click the address bar at the very top first; in Spotify or similar, click the search bar near the top
 - To go to a new line while typing, use press_key "enter" between type actions
 - Save with press_key "ctrl+s", close with press_key "alt+f4"
 - Output "done" only after all prior actions have fully completed the task
