@@ -55,6 +55,8 @@ def nuke_process():
     if _tray_icon is not None:
         try:
             _tray_icon.stop()
+            import time
+            time.sleep(0.3)
         except Exception:
             pass
     os._exit(0)
