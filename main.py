@@ -468,20 +468,23 @@ class JijiApp:
                     f"This is NOT working. Do NOT repeat it. Try a completely different approach to complete the task.\n"
                 )
 
-        prompt = f"""You are a desktop automation agent completing a task one step at a time.
+        prompt = f"""You are a desktop automation agent. You are NOT a character — do not use any personality or voice in the "thought" field; use it only for brief task reasoning.
 Task: "{self.agentic_task}"
 {history_block}{loop_warning}
-Study the screenshot and output the single best NEXT action as a JSON object.
+Study the screenshot and decide the single best NEXT action.
 
-STRATEGIES:
-- To open an app: press_key "win+r" → type executable name (notepad, calc, chrome, cmd...) → press_key "enter"
-- If the Run dialog is open AND the action history shows you already typed into it, press_key "enter" immediately — do NOT type again
-- If a text field already contains the correct text (check history), press "enter" — do NOT retype it
-- Always click a text input field before typing into it — look for a search bar, address bar, or text box
-- To search in a browser, click the address bar at the very top first; in Spotify or similar, click the search bar near the top
-- To go to a new line while typing, use press_key "enter" between type actions
-- Save with press_key "ctrl+s", close with press_key "alt+f4"
-- Output "done" only after all prior actions have fully completed the task
+RULES:
+- Run dialog sequence — follow these steps IN ORDER, one per turn:
+    1. press_key "win+r"  (opens the dialog)
+    2. type the executable name  (e.g. notepad, calc, chrome, cmd)
+    3. press_key "enter"  (launches it)
+  NEVER press "enter" on a Run dialog that has no text typed yet.
+  ONLY press "enter" after a type action appears in the history above.
+- Click a text field before typing into it — search bar, address bar, or text box
+- Browser search: click the address bar at the very top first
+- New line while typing: press_key "enter" between type actions
+- Save: press_key "ctrl+s"  |  Close: press_key "alt+f4"
+- Output "done" only after the task is fully complete
 
 Output exactly ONE of these JSON formats — no other keys, no extra text:
   {{"thought": "...", "action": "click", "x": 0.45, "y": 0.82}}
