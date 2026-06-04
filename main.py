@@ -1034,7 +1034,7 @@ class SettingsWindow:
 
     def _label(self, parent, text, dim=False):
         tk.Label(parent, text=text, font=self.FONT, fg=self.FG_DIM if dim else self.FG,
-                 bg=self.BG, anchor="w").pack(fill=tk.X, padx=16, pady=(10, 0))
+                 bg=self.BG, anchor="w", wraplength=480, justify=tk.LEFT).pack(fill=tk.X, padx=16, pady=(10, 0))
 
     def _entry(self, parent, var, show=None):
         e = tk.Entry(parent, textvariable=var, font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
