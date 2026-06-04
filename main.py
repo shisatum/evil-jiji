@@ -408,20 +408,49 @@ class JijiApp:
 
     def start_agentic_mode(self, event):
         self.awaiting_input = False
-        self.agentic_task = self.task_entry.get()
+        user_input = self.task_entry.get()
         self.task_entry.destroy()
         self.dialogue.pack(pady=5)
 
-        if not self.agentic_task.strip():
+        if not user_input.strip():
             self.awake = False
+            self.is_idling = True
             self.change_state("sleep", "*Nevermind*")
             return
 
-        self.is_agentic = True
-        self.last_agentic_action = None
-        self.action_history = []
-        self.change_state("idle", f"Task: {self.agentic_task}")
-        self.root.after(1000, self.agentic_step)
+        self.agentic_task = user_input
+        self.change_state("idle", "Thinking...")
+        self._capture_screenshot(lambda img: self._classify_input(img, user_input))
+
+    def _classify_input(self, img, user_input):
+        img_str = self.prepare_vision_payload(img, fmt="PNG")
+        prompt = (
+            f'You are Jiji, the sardonic black cat. The user typed: "{user_input}"\n'
+            "Is this a desktop TASK to perform, or a QUESTION/conversation?\n"
+            '- Desktop task (open app, click something, type something, automate the desktop): {"type": "task"}\n'
+            '- Question or chat: {"type": "answer", "text": "your answer in Jiji\'s sardonic voice, 30 words max"}\n'
+            "Reply with ONLY one JSON object."
+        )
+        self._call_api(prompt, img_str, self._process_classification,
+                       self._handle_normal_error, json_mode=True)
+
+    def _process_classification(self, result):
+        data = {}
+        try:
+            data = json.loads(result)
+        except json.JSONDecodeError:
+            data = {"type": "task"}
+
+        if data.get("type") == "answer":
+            answer = str(data.get("text", "")).strip().strip('"')
+            self.change_state("sit_up", f'"{answer}"')
+            self.awaiting_offer = True
+        else:
+            self.is_agentic = True
+            self.last_agentic_action = None
+            self.action_history = []
+            self.change_state("idle", f"Task: {self.agentic_task}")
+            self.root.after(1000, self.agentic_step)
 
     def exit_agentic_mode(self):
         self.is_agentic = False
