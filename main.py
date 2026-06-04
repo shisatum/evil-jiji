@@ -494,6 +494,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
                        json_mode=True, timeout=120, mime="image/png")
 
     def _process_agentic_response(self, result):
+        if not self.is_agentic: return
         if SHOW_RAW_LLM_OUTPUT:
             print(f"\n--- RAW LLM OUTPUT (AGENTIC) ---\n{result}\n----------------------")
 
@@ -624,6 +625,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.root.after(4000, self.agentic_step)
 
     def execute_agentic_action(self, action_data):
+        if not self.is_agentic: return
         action = str(action_data.get("action", "none")).lower()
 
         if action == "done" and action_data.get("text") and str(action_data["text"]).lower() != "null":
