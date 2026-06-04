@@ -20,31 +20,71 @@ from io import BytesIO
 from PIL import Image, ImageTk
 
 # --- CONFIGURATION ---
-SHOW_RAW_LLM_OUTPUT = True
+# Edit settings via the systray icon → Settings, or by editing settings.cfg directly.
+# These globals are set at startup by apply_settings(); do not hardcode values here.
 
-# Set USE_GROQ = True and paste your key from console.groq.com to use Llama 3.2 Vision.
-# The free tier is more than enough for Jiji's usage.
-USE_GROQ = False
-GROQ_API_KEY = ""
-GROQ_MODEL   = "meta-llama/llama-4-scout-17b-16e-instruct"  # or "llama-3.2-90b-vision-preview" for more reasoning
+SETTINGS_DEFAULTS = {
+    "backend":             "ollama",   # "groq" | "ollama" | "local"
+    "groq_api_key":        "",
+    "groq_model":          "meta-llama/llama-4-scout-17b-16e-instruct",
+    "ollama_model":        "llama3.2-vision",
+    "local_base_url":      "http://localhost:8000/v1",
+    "local_model":         "llama3.2-vision",
+    "high_res_vision":     True,
+    "show_raw_llm_output": True,
+}
+SETTINGS_FILE = "settings.cfg"
 
-# Local llama-cpp-python server (highest priority when USE_LOCAL = True)
-# Run: python -m llama_cpp.server --model <path>.gguf --n_gpu_layers -1 --n_ctx 4096 --port 8000
-# Recommended model: leafspark/Llama-3.2-11B-Vision-Instruct-GGUF  Q4_K_M (~6 GB, fits GTX 1070)
-USE_LOCAL      = False
-LOCAL_BASE_URL = "http://localhost:8000/v1"
-LOCAL_MODEL    = "llama3.2-vision"  # cosmetic label sent to the local server
-
-# Local fallback via Ollama (used when USE_GROQ = False and USE_LOCAL = False)
-# Requires Ollama v0.24.0 — llama3.2-vision is broken in 0.30.x+
-OLLAMA_MODEL = "llama3.2-vision"
-
-# Vision resolution for Clippy mode (left-click screen analysis)
-# True  → 1024px PNG  (sharper, recommended for local models)
-# False → 512px JPEG  (faster, lower token cost for Groq/cloud)
-HIGH_RES_VISION = True
+# Runtime globals — populated by apply_settings() at startup
+SHOW_RAW_LLM_OUTPUT = SETTINGS_DEFAULTS["show_raw_llm_output"]
+USE_GROQ     = False
+USE_LOCAL    = False
+GROQ_API_KEY = SETTINGS_DEFAULTS["groq_api_key"]
+GROQ_MODEL   = SETTINGS_DEFAULTS["groq_model"]
+OLLAMA_MODEL = SETTINGS_DEFAULTS["ollama_model"]
+LOCAL_BASE_URL = SETTINGS_DEFAULTS["local_base_url"]
+LOCAL_MODEL    = SETTINGS_DEFAULTS["local_model"]
+HIGH_RES_VISION = SETTINGS_DEFAULTS["high_res_vision"]
 
 MEMORY_FILE = "jiji_memory.json"  # persists Jiji's recent comments across sessions
+
+
+def load_settings():
+    """Load settings.cfg and merge over defaults. Missing keys use defaults."""
+    s = dict(SETTINGS_DEFAULTS)
+    try:
+        with open(SETTINGS_FILE) as f:
+            s.update(json.load(f))
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    return s
+
+def apply_settings(s):
+    """Write a settings dict into the module-level globals."""
+    global USE_GROQ, USE_LOCAL, GROQ_API_KEY, GROQ_MODEL
+    global OLLAMA_MODEL, LOCAL_BASE_URL, LOCAL_MODEL
+    global HIGH_RES_VISION, SHOW_RAW_LLM_OUTPUT
+    USE_GROQ       = (s["backend"] == "groq")
+    USE_LOCAL      = (s["backend"] == "local")
+    GROQ_API_KEY   = s["groq_api_key"]
+    GROQ_MODEL     = s["groq_model"]
+    OLLAMA_MODEL   = s["ollama_model"]
+    LOCAL_BASE_URL = s["local_base_url"]
+    LOCAL_MODEL    = s["local_model"]
+    HIGH_RES_VISION      = s["high_res_vision"]
+    SHOW_RAW_LLM_OUTPUT  = s["show_raw_llm_output"]
+
+def save_settings(s):
+    """Write only non-default values to settings.cfg. Delete file if all defaults."""
+    delta = {k: v for k, v in s.items() if v != SETTINGS_DEFAULTS.get(k)}
+    if delta:
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump(delta, f, indent=2)
+    else:
+        try:
+            os.remove(SETTINGS_FILE)
+        except FileNotFoundError:
+            pass
 
 pyautogui.FAILSAFE = True
 
@@ -921,6 +961,166 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.is_idling = True
         self.change_state("sleep", "*Fine. Sleeping.*")
 
+class SettingsWindow:
+    BG      = "#1e1e1e"
+    BG_NAV  = "#252525"
+    BG_SEL  = "#3a3a3a"
+    FG      = "#ffffff"
+    FG_DIM  = "#aaaaaa"
+    ACCENT  = "#5294e2"
+    ENTRY_BG = "#333333"
+    FONT    = ("Courier", 9)
+    FONT_HD = ("Courier", 10, "bold")
+
+    CATEGORIES = ["General", "Backend", "Groq", "Ollama", "Local", "Vision"]
+
+    def __init__(self, parent, s):
+        if hasattr(parent, "_settings_win") and parent._settings_win and parent._settings_win.winfo_exists():
+            parent._settings_win.lift()
+            return
+
+        self.win = tk.Toplevel(parent)
+        parent._settings_win = self.win
+        self.win.title("Jiji Settings")
+        self.win.configure(bg=self.BG)
+        self.win.resizable(False, False)
+        self.win.geometry("580x360")
+        self.win.grab_set()
+
+        # Widget vars (created once, shared across panels)
+        self.backend_var      = tk.StringVar(value=s["backend"])
+        self.groq_key_var     = tk.StringVar(value=s["groq_api_key"])
+        self.groq_model_var   = tk.StringVar(value=s["groq_model"])
+        self.ollama_model_var = tk.StringVar(value=s["ollama_model"])
+        self.local_url_var    = tk.StringVar(value=s["local_base_url"])
+        self.local_model_var  = tk.StringVar(value=s["local_model"])
+        self.high_res_var     = tk.BooleanVar(value=s["high_res_vision"])
+        self.raw_log_var      = tk.BooleanVar(value=s["show_raw_llm_output"])
+
+        self._build()
+        self._show("General")
+
+    def _build(self):
+        # Left nav
+        self.nav = tk.Frame(self.win, bg=self.BG_NAV, width=130)
+        self.nav.pack(side=tk.LEFT, fill=tk.Y)
+        self.nav.pack_propagate(False)
+        self._nav_btns = {}
+        for cat in self.CATEGORIES:
+            b = tk.Button(self.nav, text=cat, font=self.FONT, fg=self.FG, bg=self.BG_NAV,
+                          activebackground=self.BG_SEL, activeforeground=self.FG,
+                          relief=tk.FLAT, anchor="w", padx=12,
+                          command=lambda c=cat: self._show(c))
+            b.pack(fill=tk.X, pady=1)
+            self._nav_btns[cat] = b
+
+        # Right panel
+        self.panel = tk.Frame(self.win, bg=self.BG)
+        self.panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Bottom bar
+        bar = tk.Frame(self.win, bg=self.BG, pady=6)
+        bar.pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(bar, text="Cancel", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
+                  relief=tk.FLAT, padx=10, command=self.win.destroy).pack(side=tk.RIGHT, padx=6)
+        tk.Button(bar, text="OK", font=self.FONT, fg=self.FG, bg=self.ACCENT,
+                  relief=tk.FLAT, padx=10, command=self._ok).pack(side=tk.RIGHT, padx=2)
+        tk.Button(bar, text="Apply", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
+                  relief=tk.FLAT, padx=10, command=self._apply).pack(side=tk.RIGHT, padx=2)
+
+    def _clear_panel(self):
+        for w in self.panel.winfo_children():
+            w.destroy()
+
+    def _label(self, parent, text, dim=False):
+        tk.Label(parent, text=text, font=self.FONT, fg=self.FG_DIM if dim else self.FG,
+                 bg=self.BG, anchor="w").pack(fill=tk.X, padx=16, pady=(10, 0))
+
+    def _entry(self, parent, var, show=None):
+        e = tk.Entry(parent, textvariable=var, font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
+                     insertbackground=self.FG, relief=tk.FLAT, show=show or "")
+        e.pack(fill=tk.X, padx=16, pady=(2, 0))
+
+    def _check(self, parent, text, var):
+        tk.Checkbutton(parent, text=text, variable=var, font=self.FONT,
+                       fg=self.FG, bg=self.BG, selectcolor=self.ENTRY_BG,
+                       activebackground=self.BG, activeforeground=self.FG,
+                       anchor="w").pack(fill=tk.X, padx=16, pady=(10, 0))
+
+    def _show(self, category):
+        # Update nav button highlights
+        for cat, btn in self._nav_btns.items():
+            btn.configure(bg=self.BG_SEL if cat == category else self.BG_NAV)
+        self._clear_panel()
+        p = self.panel
+
+        if category == "General":
+            self._label(p, "General", dim=True)
+            self._check(p, "Show raw LLM output in console log", self.raw_log_var)
+
+        elif category == "Backend":
+            self._label(p, "Active backend", dim=True)
+            for val, lbl, desc in [
+                ("ollama", "Ollama (local)",  "Requires Ollama v0.24.0 running locally"),
+                ("groq",   "Groq (cloud)",    "Fast cloud API — free tier is plenty"),
+                ("local",  "Local llama-cpp", "Requires llama-cpp-python server on port 8000"),
+            ]:
+                f = tk.Frame(p, bg=self.BG)
+                f.pack(fill=tk.X, padx=16, pady=(8, 0))
+                tk.Radiobutton(f, text=lbl, variable=self.backend_var, value=val,
+                               font=self.FONT, fg=self.FG, bg=self.BG,
+                               selectcolor=self.ENTRY_BG, activebackground=self.BG,
+                               activeforeground=self.FG).pack(side=tk.LEFT)
+                tk.Label(f, text=f"  {desc}", font=self.FONT, fg=self.FG_DIM,
+                         bg=self.BG).pack(side=tk.LEFT)
+
+        elif category == "Groq":
+            self._label(p, "Groq API key", dim=True)
+            self._entry(p, self.groq_key_var, show="*")
+            self._label(p, "Model", dim=True)
+            self._entry(p, self.groq_model_var)
+            self._label(p, "Get a free key at console.groq.com", dim=True)
+
+        elif category == "Ollama":
+            self._label(p, "Model name", dim=True)
+            self._entry(p, self.ollama_model_var)
+            self._label(p, "Requires Ollama v0.24.0 for llama3.2-vision", dim=True)
+
+        elif category == "Local":
+            self._label(p, "Server base URL", dim=True)
+            self._entry(p, self.local_url_var)
+            self._label(p, "Model label (cosmetic)", dim=True)
+            self._entry(p, self.local_model_var)
+            self._label(p, "Run: python -m llama_cpp.server --model <path>.gguf", dim=True)
+
+        elif category == "Vision":
+            self._label(p, "Vision", dim=True)
+            self._check(p, "High-res screenshots (1024px PNG) for Clippy mode", self.high_res_var)
+            self._label(p,
+                "Off = 512px JPEG — faster, lower token cost for cloud backends", dim=True)
+
+    def _collect(self):
+        return {
+            "backend":             self.backend_var.get(),
+            "groq_api_key":        self.groq_key_var.get(),
+            "groq_model":          self.groq_model_var.get(),
+            "ollama_model":        self.ollama_model_var.get(),
+            "local_base_url":      self.local_url_var.get(),
+            "local_model":         self.local_model_var.get(),
+            "high_res_vision":     self.high_res_var.get(),
+            "show_raw_llm_output": self.raw_log_var.get(),
+        }
+
+    def _apply(self):
+        s = self._collect()
+        apply_settings(s)
+        save_settings(s)
+
+    def _ok(self):
+        self._apply()
+        self.win.destroy()
+
+
 def _make_tray_icon_image():
     """Crop top-left of sprites.png for the tray icon; fall back to a dark square."""
     try:
@@ -931,6 +1131,9 @@ def _make_tray_icon_image():
 
 def create_jiji():
     print("Jiji V1.24 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+
+    # Load and apply settings before anything else
+    apply_settings(load_settings())
 
     # Hide the console window at startup
     hwnd = ctypes.windll.kernel32.GetConsoleWindow()
@@ -946,6 +1149,7 @@ def create_jiji():
         ctypes.windll.user32.ShowWindow(hwnd, 0 if visible else 5)
 
     tray_menu = pystray.Menu(
+        pystray.MenuItem("Settings", lambda icon, item: root.after(0, lambda: SettingsWindow(root, load_settings()))),
         pystray.MenuItem("Show/Hide Log", toggle_console, default=True),
         pystray.MenuItem("Quit Jiji", lambda icon, item: root.after(0, nuke_process)),
     )
