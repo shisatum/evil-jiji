@@ -33,7 +33,6 @@ SETTINGS_DEFAULTS = {
     "local_base_url":      "http://localhost:8000/v1",
     "local_model":         "llama3.2-vision",
     "high_res_vision":     True,
-    "show_raw_llm_output": True,
     "auto_wake":           False,
     "auto_wake_minutes":   5,
     "app_launch_delay":    3,
@@ -41,7 +40,6 @@ SETTINGS_DEFAULTS = {
 SETTINGS_FILE = "settings.cfg"
 
 # Runtime globals — populated by apply_settings() at startup
-SHOW_RAW_LLM_OUTPUT = SETTINGS_DEFAULTS["show_raw_llm_output"]
 USE_GROQ     = False
 USE_LOCAL    = False
 GROQ_API_KEY = SETTINGS_DEFAULTS["groq_api_key"]
@@ -71,7 +69,7 @@ def apply_settings(s):
     """Write a settings dict into the module-level globals."""
     global USE_GROQ, USE_LOCAL, GROQ_API_KEY, GROQ_MODEL
     global OLLAMA_MODEL, LOCAL_BASE_URL, LOCAL_MODEL
-    global HIGH_RES_VISION, SHOW_RAW_LLM_OUTPUT
+    global HIGH_RES_VISION
     global AUTO_WAKE, AUTO_WAKE_MINUTES, APP_LAUNCH_DELAY
     USE_GROQ       = (s["backend"] == "groq")
     USE_LOCAL      = (s["backend"] == "local")
@@ -81,7 +79,6 @@ def apply_settings(s):
     LOCAL_BASE_URL = s["local_base_url"]
     LOCAL_MODEL    = s["local_model"]
     HIGH_RES_VISION      = s["high_res_vision"]
-    SHOW_RAW_LLM_OUTPUT  = s["show_raw_llm_output"]
     AUTO_WAKE            = s["auto_wake"]
     AUTO_WAKE_MINUTES    = s["auto_wake_minutes"]
     APP_LAUNCH_DELAY     = s["app_launch_delay"]
@@ -618,8 +615,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
 
     def _process_agentic_response(self, result):
         if not self.is_agentic: return
-        if SHOW_RAW_LLM_OUTPUT:
-            print(f"\n--- RAW LLM OUTPUT (AGENTIC) ---\n{result}\n----------------------")
+        print(f"\n--- RAW LLM OUTPUT (AGENTIC) ---\n{result}\n----------------------")
 
         data = {}
         try:
@@ -907,8 +903,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
 
     def _process_clippy_response(self, result):
         if not self.awake or self.is_agentic: return
-        if SHOW_RAW_LLM_OUTPUT:
-            print(f"\n--- RAW LLM OUTPUT (CLIPPY) ---\n{result}\n----------------------")
+        print(f"\n--- RAW LLM OUTPUT (CLIPPY) ---\n{result}\n----------------------")
 
         data = {}
         try:
@@ -1000,7 +995,7 @@ class SettingsWindow:
     FONT    = ("Courier", 9)
     FONT_HD = ("Courier", 10, "bold")
 
-    CATEGORIES = ["General", "Behavior", "Backend", "Groq", "Ollama", "Local", "Vision"]
+    CATEGORIES = ["Behavior", "Backend", "Groq", "Ollama", "Local", "Vision"]
 
     def __init__(self, parent, s):
         if hasattr(parent, "_settings_win") and parent._settings_win and parent._settings_win.winfo_exists():
@@ -1023,13 +1018,12 @@ class SettingsWindow:
         self.local_url_var    = tk.StringVar(value=s["local_base_url"])
         self.local_model_var  = tk.StringVar(value=s["local_model"])
         self.high_res_var          = tk.BooleanVar(value=s["high_res_vision"])
-        self.raw_log_var           = tk.BooleanVar(value=s["show_raw_llm_output"])
         self.auto_wake_var         = tk.BooleanVar(value=s["auto_wake"])
         self.auto_wake_minutes_var = tk.StringVar(value=str(s["auto_wake_minutes"]))
         self.app_launch_delay_var  = tk.StringVar(value=str(s["app_launch_delay"]))
 
         self._build()
-        self._show("General")
+        self._show("Behavior")
 
     def _build(self):
         # Bottom bar — must be packed BEFORE the expanding panel
@@ -1085,11 +1079,7 @@ class SettingsWindow:
         self._clear_panel()
         p = self.panel
 
-        if category == "General":
-            self._label(p, "General", dim=True)
-            self._check(p, "Show raw LLM output in console log", self.raw_log_var)
-
-        elif category == "Behavior":
+        if category == "Behavior":
             self._label(p, "Auto-wake")
             f = tk.Frame(p, bg=self.BG)
             f.pack(fill=tk.X, padx=16, pady=(6, 0))
@@ -1166,7 +1156,6 @@ class SettingsWindow:
             "local_base_url":      self.local_url_var.get(),
             "local_model":         self.local_model_var.get(),
             "high_res_vision":     self.high_res_var.get(),
-            "show_raw_llm_output": self.raw_log_var.get(),
             "auto_wake":           self.auto_wake_var.get(),
             "auto_wake_minutes":   auto_wake_min,
             "app_launch_delay":    launch_delay,
