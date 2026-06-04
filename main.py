@@ -16,6 +16,7 @@ import base64
 import math
 import re
 import threading
+import time
 from io import BytesIO
 from PIL import Image, ImageTk
 
@@ -32,6 +33,9 @@ SETTINGS_DEFAULTS = {
     "local_model":         "llama3.2-vision",
     "high_res_vision":     True,
     "show_raw_llm_output": True,
+    "auto_wake":           False,
+    "auto_wake_minutes":   5,
+    "app_launch_delay":    3,
 }
 SETTINGS_FILE = "settings.cfg"
 
@@ -44,7 +48,10 @@ GROQ_MODEL   = SETTINGS_DEFAULTS["groq_model"]
 OLLAMA_MODEL = SETTINGS_DEFAULTS["ollama_model"]
 LOCAL_BASE_URL = SETTINGS_DEFAULTS["local_base_url"]
 LOCAL_MODEL    = SETTINGS_DEFAULTS["local_model"]
-HIGH_RES_VISION = SETTINGS_DEFAULTS["high_res_vision"]
+HIGH_RES_VISION   = SETTINGS_DEFAULTS["high_res_vision"]
+AUTO_WAKE         = SETTINGS_DEFAULTS["auto_wake"]
+AUTO_WAKE_MINUTES = SETTINGS_DEFAULTS["auto_wake_minutes"]
+APP_LAUNCH_DELAY  = SETTINGS_DEFAULTS["app_launch_delay"]
 
 MEMORY_FILE = "jiji_memory.json"  # persists Jiji's recent comments across sessions
 
@@ -64,6 +71,7 @@ def apply_settings(s):
     global USE_GROQ, USE_LOCAL, GROQ_API_KEY, GROQ_MODEL
     global OLLAMA_MODEL, LOCAL_BASE_URL, LOCAL_MODEL
     global HIGH_RES_VISION, SHOW_RAW_LLM_OUTPUT
+    global AUTO_WAKE, AUTO_WAKE_MINUTES, APP_LAUNCH_DELAY
     USE_GROQ       = (s["backend"] == "groq")
     USE_LOCAL      = (s["backend"] == "local")
     GROQ_API_KEY   = s["groq_api_key"]
@@ -73,6 +81,9 @@ def apply_settings(s):
     LOCAL_MODEL    = s["local_model"]
     HIGH_RES_VISION      = s["high_res_vision"]
     SHOW_RAW_LLM_OUTPUT  = s["show_raw_llm_output"]
+    AUTO_WAKE            = s["auto_wake"]
+    AUTO_WAKE_MINUTES    = s["auto_wake_minutes"]
+    APP_LAUNCH_DELAY     = s["app_launch_delay"]
 
 def save_settings(s):
     """Write only non-default values to settings.cfg. Delete file if all defaults."""
@@ -95,7 +106,6 @@ def nuke_process():
     if _tray_icon is not None:
         try:
             _tray_icon.stop()
-            import time
             time.sleep(0.3)
         except Exception:
             pass
@@ -161,6 +171,21 @@ class JijiApp:
 
         self._load_memory()
         self.animate()
+
+        self._last_auto_wake = time.time()
+        self.root.after(10_000, self._auto_wake_tick)
+
+    def _auto_wake_tick(self):
+        """Fires every 10s. Wakes Jiji automatically if auto-wake is enabled and the interval has elapsed."""
+        if (AUTO_WAKE
+                and not self.awake
+                and not self.is_agentic
+                and not self.awaiting_input
+                and not self.awaiting_offer):
+            if time.time() - self._last_auto_wake >= AUTO_WAKE_MINUTES * 60:
+                self._last_auto_wake = time.time()
+                self.wake_up()
+        self.root.after(10_000, self._auto_wake_tick)
 
     def _capture_screenshot(self, callback):
         self.root.withdraw()
@@ -381,6 +406,7 @@ class JijiApp:
             self.wake_up()
 
     def wake_up(self):
+        self._last_auto_wake = time.time()
         self.awake = True
         self.actions_remaining = 1
         self.is_idling = False
@@ -800,7 +826,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             self.action_history.append(f"press_key '{key}'")
 
             # Give apps extra time to appear after Enter; 1s for other keys
-            delay = 3000 if key == "enter" else 1000
+            delay = int(APP_LAUNCH_DELAY * 1000) if key == "enter" else 1000
             self.root.after(delay, self.agentic_step)
 
         elif action == "done":
@@ -972,7 +998,7 @@ class SettingsWindow:
     FONT    = ("Courier", 9)
     FONT_HD = ("Courier", 10, "bold")
 
-    CATEGORIES = ["General", "Backend", "Groq", "Ollama", "Local", "Vision"]
+    CATEGORIES = ["General", "Behavior", "Backend", "Groq", "Ollama", "Local", "Vision"]
 
     def __init__(self, parent, s):
         if hasattr(parent, "_settings_win") and parent._settings_win and parent._settings_win.winfo_exists():
@@ -994,8 +1020,11 @@ class SettingsWindow:
         self.ollama_model_var = tk.StringVar(value=s["ollama_model"])
         self.local_url_var    = tk.StringVar(value=s["local_base_url"])
         self.local_model_var  = tk.StringVar(value=s["local_model"])
-        self.high_res_var     = tk.BooleanVar(value=s["high_res_vision"])
-        self.raw_log_var      = tk.BooleanVar(value=s["show_raw_llm_output"])
+        self.high_res_var          = tk.BooleanVar(value=s["high_res_vision"])
+        self.raw_log_var           = tk.BooleanVar(value=s["show_raw_llm_output"])
+        self.auto_wake_var         = tk.BooleanVar(value=s["auto_wake"])
+        self.auto_wake_minutes_var = tk.StringVar(value=str(s["auto_wake_minutes"]))
+        self.app_launch_delay_var  = tk.StringVar(value=str(s["app_launch_delay"]))
 
         self._build()
         self._show("General")
@@ -1058,6 +1087,25 @@ class SettingsWindow:
             self._label(p, "General", dim=True)
             self._check(p, "Show raw LLM output in console log", self.raw_log_var)
 
+        elif category == "Behavior":
+            self._label(p, "Auto-wake")
+            f = tk.Frame(p, bg=self.BG)
+            f.pack(fill=tk.X, padx=16, pady=(6, 0))
+            tk.Radiobutton(f, text="Enabled", variable=self.auto_wake_var, value=True,
+                           font=self.FONT, fg=self.FG, bg=self.BG,
+                           selectcolor=self.ENTRY_BG, activebackground=self.BG,
+                           activeforeground=self.FG).pack(side=tk.LEFT)
+            tk.Radiobutton(f, text="Disabled", variable=self.auto_wake_var, value=False,
+                           font=self.FONT, fg=self.FG, bg=self.BG,
+                           selectcolor=self.ENTRY_BG, activebackground=self.BG,
+                           activeforeground=self.FG).pack(side=tk.LEFT, padx=(12, 0))
+            self._label(p, "Wake interval (minutes):", dim=True)
+            self._entry(p, self.auto_wake_minutes_var)
+
+            self._label(p, "App launch delay (seconds)")
+            self._label(p, "How long to wait after launching an app before taking the next screenshot.", dim=True)
+            self._entry(p, self.app_launch_delay_var)
+
         elif category == "Backend":
             self._label(p, "Active backend", dim=True)
             for val, lbl, desc in [
@@ -1100,6 +1148,14 @@ class SettingsWindow:
                 "On = PNG (lossless). Off = JPEG (faster, lower token cost for cloud backends)", dim=True)
 
     def _collect(self):
+        try:
+            auto_wake_min = float(self.auto_wake_minutes_var.get())
+        except ValueError:
+            auto_wake_min = SETTINGS_DEFAULTS["auto_wake_minutes"]
+        try:
+            launch_delay = float(self.app_launch_delay_var.get())
+        except ValueError:
+            launch_delay = SETTINGS_DEFAULTS["app_launch_delay"]
         return {
             "backend":             self.backend_var.get(),
             "groq_api_key":        self.groq_key_var.get(),
@@ -1109,6 +1165,9 @@ class SettingsWindow:
             "local_model":         self.local_model_var.get(),
             "high_res_vision":     self.high_res_var.get(),
             "show_raw_llm_output": self.raw_log_var.get(),
+            "auto_wake":           self.auto_wake_var.get(),
+            "auto_wake_minutes":   auto_wake_min,
+            "app_launch_delay":    launch_delay,
         }
 
     def _apply(self):
