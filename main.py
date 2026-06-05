@@ -489,6 +489,8 @@ class JijiApp:
         user_input = self.task_entry.get("1.0", "end-1c").strip()
         self.task_entry.destroy()
         self.dialogue.pack(pady=5)
+        if user_input:
+            print(f"\n[USER - RIGHT CLICK] \"{user_input}\"")
 
         if not user_input:
             self.awake = False
@@ -993,6 +995,8 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self._dismiss_clippy_reply_entry()
         self.btn_frame.pack_forget()
         self.awaiting_offer = False
+        if user_input:
+            print(f"\n[USER - CLIPPY REPLY] \"{user_input}\"")
 
         if not user_input:
             self.awake = False
@@ -1030,6 +1034,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.awaiting_offer = False
         self.btn_frame.pack_forget()
         task = self.pending_offer_task or self.pending_offer
+        print(f"\n[USER - OFFER ACCEPTED] \"{self.pending_offer}\"")
         self.pending_offer = ""
         self.pending_offer_task = ""
         self.is_agentic = True
@@ -1044,6 +1049,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.awaiting_offer = False
         self.awake = False
         self.btn_frame.pack_forget()
+        print(f"\n[USER - OFFER DECLINED] \"{self.pending_offer}\"")
         self.is_idling = True
         self.change_state("sleep", "*Fine. Sleeping.*")
 
