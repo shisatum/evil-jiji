@@ -195,6 +195,7 @@ class JijiApp:
         """Fires every 10s. Wakes Jiji automatically if auto-wake is enabled and the interval has elapsed."""
         if (AUTO_WAKE
                 and not self.awake
+                and self.is_idling
                 and not self.is_agentic
                 and not self.awaiting_input
                 and not self.awaiting_offer):
