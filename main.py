@@ -1,4 +1,4 @@
-# Jiji v1.29
+# Jiji v1.30
 import tkinter as tk
 import keyboard
 import ctypes
@@ -144,6 +144,11 @@ class JijiApp:
         self.pending_offer_task = ""
         self.clippy_reply_entry = None
         self.recent_comments = []
+
+        # VLM wait timer
+        self._wait_timer_active = False
+        self._wait_start = 0.0
+        self._wait_label = ""
         self.last_screenshot_hash = ""
 
         # Lifecycle & Dragging variables
@@ -199,8 +204,34 @@ class JijiApp:
         self.root.deiconify()
         callback(img)
 
-    def _call_api(self, prompt, img_str, on_result, on_error, json_mode=False, timeout=120, mime="image/jpeg"):
+    def _start_wait_timer(self, label):
+        self._wait_label = label
+        self._wait_start = time.time()
+        if not self._wait_timer_active:
+            self._wait_timer_active = True
+            self._tick_wait_timer()
+
+    def _tick_wait_timer(self):
+        if not self._wait_timer_active:
+            return
+        elapsed = time.time() - self._wait_start
+        self.dialogue.config(text=f"{self._wait_label}... ({elapsed:.1f}s)")
+        self.root.after(100, self._tick_wait_timer)
+
+    def _stop_wait_timer(self, outcome="done"):
+        if not self._wait_timer_active:
+            return
+        self._wait_timer_active = False
+        elapsed = time.time() - self._wait_start
+        print(f"[TIMER] {self._wait_label}: {outcome} after {elapsed:.1f}s")
+
+    def _wait_done(self, callback, arg, failed=False):
+        self._stop_wait_timer("failed" if failed else "done")
+        callback(arg)
+
+    def _call_api(self, prompt, img_str, on_result, on_error, json_mode=False, timeout=120, mime="image/jpeg", label="Thinking"):
         """Unified vision API call — routes to local llama-cpp server, Groq, or Ollama based on config."""
+        self._start_wait_timer(label)
         if USE_LOCAL:
             payload = {
                 "model": LOCAL_MODEL,
@@ -272,9 +303,9 @@ class JijiApp:
                     result = resp_json["choices"][0]["message"]["content"]
                 else:
                     result = response.json().get("response", "")
-                self.root.after(0, lambda r=result: on_result(r))
+                self.root.after(0, lambda r=result: self._wait_done(on_result, r))
             except Exception as e:
-                self.root.after(0, lambda err=e: on_error(err))
+                self.root.after(0, lambda err=e: self._wait_done(on_error, err, failed=True))
 
         threading.Thread(target=_fetch, daemon=True).start()
 
@@ -522,7 +553,7 @@ class JijiApp:
             "Reply with ONLY one JSON object."
         )
         self._call_api(prompt, img_str, self._process_classification,
-                       self._handle_normal_error, json_mode=True)
+                       self._handle_normal_error, json_mode=True, label="Reading")
 
     def _process_classification(self, result):
         data = {}
@@ -548,6 +579,7 @@ class JijiApp:
             self.root.after(1000, self.agentic_step)
 
     def exit_agentic_mode(self):
+        self._stop_wait_timer("aborted")
         self.is_agentic = False
         self.agentic_task = ""
         self.agentic_queue.clear()
@@ -632,7 +664,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
   {{"thought": "...", "action": "done"}}"""
 
         self._call_api(prompt, img_str, self._process_agentic_response, self._handle_agentic_error,
-                       json_mode=True, timeout=120, mime="image/png")
+                       json_mode=True, timeout=120, mime="image/png", label="Working")
 
     def _process_agentic_response(self, result):
         if not self.is_agentic: return
@@ -928,7 +960,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             '{"comment": "your remark", "offer": "sardonic offer, or null", "offer_task": "imperative task, or null"}'
         )
         self._call_api(prompt, img_str, self._process_clippy_response,
-                       self._handle_normal_error, json_mode=True, timeout=120)
+                       self._handle_normal_error, json_mode=True, timeout=120, label="Thinking")
 
     def _process_clippy_response(self, result):
         if not self.awake or self.is_agentic: return
@@ -1301,7 +1333,7 @@ def create_jiji():
     print(f"\n{'='*50}")
     print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
-    print("Jiji V1.29 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+    print("Jiji V1.30 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
     apply_settings(load_settings())

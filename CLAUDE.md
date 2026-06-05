@@ -2,7 +2,7 @@
 
 ## Version numbering
 
-**Current version: v1.29**
+**Current version: v1.30**
 
 Increment the minor version number (`v1.XX`) with every update, regardless of whether the change is on a feature branch or directly on main.
 
