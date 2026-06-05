@@ -977,6 +977,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             wrap=tk.WORD)
         self.clippy_reply_entry.insert("1.0", "reply...")
         self.clippy_reply_entry.pack(pady=(0, 5))
+        self.clippy_reply_entry.focus_set()
         self.clippy_reply_entry.bind("<FocusIn>",  self._reply_focus_in)
         self.clippy_reply_entry.bind("<FocusOut>", self._reply_focus_out)
         self.clippy_reply_entry.bind("<Return>",   self._submit_clippy_reply)
