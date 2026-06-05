@@ -99,6 +99,16 @@ pyautogui.FAILSAFE = True
 
 _tray_icon = None
 
+def _log_backend(changed=False):
+    """Print the active backend and model to the console."""
+    tag = "[BACKEND CHANGED]" if changed else "[BACKEND]"
+    if USE_GROQ:
+        print(f"{tag} Groq | {GROQ_MODEL}")
+    elif USE_LOCAL:
+        print(f"{tag} Local (llama-cpp) | {LOCAL_MODEL} @ {LOCAL_BASE_URL}")
+    else:
+        print(f"{tag} Ollama | {OLLAMA_MODEL}")
+
 def nuke_process(reason="ESC"):
     print(f"\n[KILLSWITCH] Jiji has been vaporized. (reason: {reason})")
     print(f"[END]   {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -1291,6 +1301,7 @@ class SettingsWindow:
         s = self._collect()
         apply_settings(s)
         save_settings(s)
+        _log_backend(changed=True)
 
     def _ok(self):
         self._apply()
@@ -1337,6 +1348,7 @@ def create_jiji():
 
     # Load and apply settings before anything else
     apply_settings(load_settings())
+    _log_backend()
 
     # Hide the console window at startup
     hwnd = ctypes.windll.kernel32.GetConsoleWindow()
