@@ -1,4 +1,4 @@
-# Jiji v1.27
+# Jiji v1.28
 import tkinter as tk
 import keyboard
 import ctypes
@@ -509,10 +509,9 @@ class JijiApp:
         prompt = (
             f'You are Jiji, the sardonic black cat. {context_line}'
             f'The user replied: "{user_input}"\n'
-            "Classify this as ONE of:\n"
-            '- Desktop TASK (open/close app, click, type, automate): {"type": "task"}\n'
-            '- QUESTION or chat (asking for info, opinions): {"type": "answer", "text": "sardonic reply, 30 words max"}\n'
-            '- CORRECTION or acknowledgment (user is saying the task is unnecessary, already done, wrong, or giving feedback): {"type": "correction", "text": "sardonic acknowledgment, 15 words max"}\n'
+            "Classify as ONE of:\n"
+            '- TASK (open/close app, click, type, automate the desktop): {"type": "task"}\n'
+            '- CHAT (anything else — questions, corrections, acknowledgments, conversation): {"type": "chat", "text": "sardonic reply, 30 words max"}\n'
             "Reply with ONLY one JSON object."
         )
         self._call_api(prompt, img_str, self._process_classification,
@@ -528,16 +527,10 @@ class JijiApp:
         classified_as = data.get("type", "task")
         print(f"\n[CLASSIFY] → {classified_as}")
 
-        if classified_as == "answer":
-            answer = str(data.get("text", "")).strip().strip('"')
-            print(f"\n[JIJI - ANSWER] \"{answer}\"")
-            self.change_state("sit_up", f'"{answer}"')
-            self.awaiting_offer = True
-            self.root.after(500, self._show_clippy_reply_entry)
-        elif classified_as == "correction":
-            ack = str(data.get("text", "Fine.")).strip().strip('"')
-            print(f"\n[JIJI - CORRECTION ACK] \"{ack}\"")
-            self.change_state("sit_up", f'"{ack}"')
+        if classified_as in ("chat", "answer", "correction"):  # "answer"/"correction" as aliases
+            reply = str(data.get("text", "")).strip().strip('"')
+            print(f"\n[JIJI - REPLY] \"{reply}\"")
+            self.change_state("sit_up", f'"{reply}"')
             self.awaiting_offer = True
             self.root.after(500, self._show_clippy_reply_entry)
         else:
@@ -1293,7 +1286,7 @@ def create_jiji():
     print(f"\n{'='*50}")
     print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
-    print("Jiji V1.27 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+    print("Jiji V1.28 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
     apply_settings(load_settings())
