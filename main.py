@@ -525,14 +525,16 @@ class JijiApp:
         except json.JSONDecodeError:
             data = {"type": "task"}
 
-        if data.get("type") == "answer":
+        classified_as = data.get("type", "task")
+        print(f"\n[CLASSIFY] → {classified_as}")
+
+        if classified_as == "answer":
             answer = str(data.get("text", "")).strip().strip('"')
             self.change_state("sit_up", f'"{answer}"')
             self.awaiting_offer = True
             self.root.after(500, self._show_clippy_reply_entry)
-        elif data.get("type") == "correction":
+        elif classified_as == "correction":
             ack = str(data.get("text", "Fine.")).strip().strip('"')
-            print(f"\n[JIJI - CORRECTION ACK] \"{ack}\"")
             self.change_state("sit_up", f'"{ack}"')
             self.awaiting_offer = True
             self.root.after(500, self._show_clippy_reply_entry)
