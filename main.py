@@ -747,8 +747,16 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
 
     def _do_agentic_click(self, tx, ty, rel_x, rel_y):
         self.change_state("shock", "*Clicking!*")
+        self.root.withdraw()  # hide Jiji so he doesn't intercept the click
+        self.root.after(50, lambda: self._execute_click(tx, ty, rel_x, rel_y))
+
+    def _execute_click(self, tx, ty, rel_x, rel_y):
+        if not self.is_agentic:
+            self.root.deiconify()
+            return
         pyautogui.moveTo(tx, ty, duration=0.4)
         pyautogui.click()
+        self.root.deiconify()
         self.action_history.append(f"click at ({rel_x:.2f}, {rel_y:.2f})")
         self.root.after(2000, self.agentic_step)
 
