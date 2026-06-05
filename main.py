@@ -1,4 +1,4 @@
-# Jiji v1.28
+# Jiji v1.29
 import tkinter as tk
 import keyboard
 import ctypes
@@ -510,9 +510,16 @@ class JijiApp:
             f'You are Jiji, the sardonic black cat. {context_line}'
             f'The user said: "{user_input}"\n'
             "Is the user REQUESTING Jiji to perform a desktop action right now?\n"
-            '- YES — user wants Jiji to do something on the desktop (open/close an app, click, type, search, etc.): {"type": "task"}\n'
-            '- NO — user is talking: correcting, asking a question, acknowledging, chatting, or mentioning software without requesting action: {"type": "chat", "text": "sardonic reply, 30 words max"}\n'
-            "If context is provided above, use it to interpret the user's intent. Reply with ONLY one JSON object."
+            '- YES — user wants Jiji to actually do something on the desktop (open/close an app, click, type, search): {"type": "task"}\n'
+            '- NO — user is just talking: banter, correcting, asking a question, acknowledging, or mentioning software without requesting action: {"type": "chat", "text": "sardonic reply, 30 words max"}\n'
+            "Examples:\n"
+            '  "open Spotify" -> task\n'
+            '  "close all my tabs" -> task\n'
+            '  "Easy for you to say, lazy bones." -> chat\n'
+            '  "Discord isn\'t even running." -> chat\n'
+            '  "what\'s the weather?" -> chat\n'
+            "When unsure, choose chat. Only choose task if the user is clearly asking for a desktop action. "
+            "Reply with ONLY one JSON object."
         )
         self._call_api(prompt, img_str, self._process_classification,
                        self._handle_normal_error, json_mode=True)
@@ -522,9 +529,9 @@ class JijiApp:
         try:
             data = json.loads(result)
         except json.JSONDecodeError:
-            data = {"type": "task"}
+            data = {"type": "chat", "text": "...what?"}
 
-        classified_as = data.get("type", "task")
+        classified_as = data.get("type", "chat")
         print(f"\n[CLASSIFY] → {classified_as}")
 
         if classified_as in ("chat", "answer", "correction"):  # "answer"/"correction" as aliases
@@ -1294,7 +1301,7 @@ def create_jiji():
     print(f"\n{'='*50}")
     print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
-    print("Jiji V1.28 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+    print("Jiji V1.29 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
     apply_settings(load_settings())
