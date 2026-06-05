@@ -1009,6 +1009,8 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self._dismiss_clippy_reply_entry()
         self.btn_frame.pack_forget()
         self.awaiting_offer = False
+        self.pending_offer = ""
+        self.pending_offer_task = ""
         if user_input:
             print(f"\n[USER - CLIPPY REPLY] \"{user_input}\"")
 
