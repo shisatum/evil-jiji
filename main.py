@@ -1,4 +1,4 @@
-# Jiji v1.26
+# Jiji v1.27
 import tkinter as tk
 import keyboard
 import ctypes
@@ -503,13 +503,16 @@ class JijiApp:
         self._capture_screenshot(lambda img: self._classify_input(img, user_input))
         return "break"  # suppress tk.Text default newline insertion on Enter
 
-    def _classify_input(self, img, user_input):
+    def _classify_input(self, img, user_input, context=None):
         img_str = self.prepare_vision_payload(img, fmt="PNG")
+        context_line = f'You just said to the user: "{context}"\n' if context else ""
         prompt = (
-            f'You are Jiji, the sardonic black cat. The user typed: "{user_input}"\n'
-            "Is this a desktop TASK to perform, or a QUESTION/conversation?\n"
-            '- Desktop task (open app, click something, type something, automate the desktop): {"type": "task"}\n'
-            '- Question or chat: {"type": "answer", "text": "your answer in Jiji\'s sardonic voice, 30 words max"}\n'
+            f'You are Jiji, the sardonic black cat. {context_line}'
+            f'The user replied: "{user_input}"\n'
+            "Classify this as ONE of:\n"
+            '- Desktop TASK (open/close app, click, type, automate): {"type": "task"}\n'
+            '- QUESTION or chat (asking for info, opinions): {"type": "answer", "text": "sardonic reply, 30 words max"}\n'
+            '- CORRECTION or acknowledgment (user is saying the task is unnecessary, already done, wrong, or giving feedback): {"type": "correction", "text": "sardonic acknowledgment, 15 words max"}\n'
             "Reply with ONLY one JSON object."
         )
         self._call_api(prompt, img_str, self._process_classification,
@@ -525,6 +528,12 @@ class JijiApp:
         if data.get("type") == "answer":
             answer = str(data.get("text", "")).strip().strip('"')
             self.change_state("sit_up", f'"{answer}"')
+            self.awaiting_offer = True
+            self.root.after(500, self._show_clippy_reply_entry)
+        elif data.get("type") == "correction":
+            ack = str(data.get("text", "Fine.")).strip().strip('"')
+            print(f"\n[JIJI - CORRECTION ACK] \"{ack}\"")
+            self.change_state("sit_up", f'"{ack}"')
             self.awaiting_offer = True
             self.root.after(500, self._show_clippy_reply_entry)
         else:
@@ -992,6 +1001,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         user_input = self.clippy_reply_entry.get("1.0", "end-1c").strip()
         if user_input == "reply...":
             user_input = ""
+        jiji_context = self.pending_offer or self.dialogue.cget("text")
         self._dismiss_clippy_reply_entry()
         self.btn_frame.pack_forget()
         self.awaiting_offer = False
@@ -1006,7 +1016,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
 
         self.agentic_task = user_input
         self.change_state("idle", "Thinking...")
-        self._capture_screenshot(lambda img: self._classify_input(img, user_input))
+        self._capture_screenshot(lambda img: self._classify_input(img, user_input, context=jiji_context))
         return "break"
 
     def _handle_normal_error(self, e):
@@ -1276,7 +1286,7 @@ def create_jiji():
     print(f"\n{'='*50}")
     print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
-    print("Jiji V1.26 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+    print("Jiji V1.27 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
     apply_settings(load_settings())
