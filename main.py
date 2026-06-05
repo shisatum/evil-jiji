@@ -1,4 +1,4 @@
-# Jiji v1.25
+# Jiji v1.26
 import tkinter as tk
 import keyboard
 import ctypes
@@ -114,6 +114,7 @@ def _handle_esc(app):
     """Context-aware killswitch: aborts tasks first, kills process second."""
     app.awaiting_offer = False
     app.btn_frame.pack_forget()
+    app._dismiss_clippy_reply_entry()
     if app.is_agentic:
         app.exit_agentic_mode()
     elif app.awaiting_input:
@@ -141,6 +142,7 @@ class JijiApp:
         self.awaiting_offer = False
         self.pending_offer = ""
         self.pending_offer_task = ""
+        self.clippy_reply_entry = None
         self.recent_comments = []
         self.last_screenshot_hash = ""
 
@@ -397,6 +399,7 @@ class JijiApp:
             self._dragging = False
             return
         if self.awaiting_offer and not self.pending_offer:
+            self._dismiss_clippy_reply_entry()
             self.awaiting_offer = False
             self.awake = False
             self.is_idling = True
@@ -521,6 +524,7 @@ class JijiApp:
             answer = str(data.get("text", "")).strip().strip('"')
             self.change_state("sit_up", f'"{answer}"')
             self.awaiting_offer = True
+            self.root.after(500, self._show_clippy_reply_entry)
         else:
             self.is_agentic = True
             self.last_agentic_action = None
@@ -940,11 +944,66 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
             self.root.after(1500, lambda: self._show_offer(comment, offer))
         else:
             self.awaiting_offer = True
+            self.root.after(500, self._show_clippy_reply_entry)
 
     def _show_offer(self, comment, offer):
         self.awaiting_offer = True
         self.dialogue.config(text=f'"{comment}"\n\n{offer}')
         self.btn_frame.pack(pady=5)
+        self.root.after(200, self._show_clippy_reply_entry)
+
+    def _show_clippy_reply_entry(self):
+        """Show a one-line reply entry below the current clippy response."""
+        if self.clippy_reply_entry or not self.awaiting_offer:
+            return
+        self.clippy_reply_entry = tk.Text(
+            self.frame, width=25, height=1, bg="#333333", fg="#aaaaaa",
+            font=("Courier", 10), borderwidth=0, insertbackground="white",
+            wrap=tk.WORD)
+        self.clippy_reply_entry.insert("1.0", "reply...")
+        self.clippy_reply_entry.pack(pady=(0, 5))
+        self.clippy_reply_entry.bind("<FocusIn>",  self._reply_focus_in)
+        self.clippy_reply_entry.bind("<FocusOut>", self._reply_focus_out)
+        self.clippy_reply_entry.bind("<Return>",   self._submit_clippy_reply)
+
+    def _reply_focus_in(self, event):
+        if self.clippy_reply_entry and self.clippy_reply_entry.get("1.0", "end-1c") == "reply...":
+            self.clippy_reply_entry.delete("1.0", "end")
+            self.clippy_reply_entry.config(fg="white")
+
+    def _reply_focus_out(self, event):
+        if self.clippy_reply_entry and not self.clippy_reply_entry.get("1.0", "end-1c").strip():
+            self.clippy_reply_entry.delete("1.0", "end")
+            self.clippy_reply_entry.insert("1.0", "reply...")
+            self.clippy_reply_entry.config(fg="#aaaaaa")
+
+    def _dismiss_clippy_reply_entry(self):
+        """Destroy the reply entry if it exists."""
+        if self.clippy_reply_entry:
+            try:
+                self.clippy_reply_entry.destroy()
+            except Exception:
+                pass
+            self.clippy_reply_entry = None
+
+    def _submit_clippy_reply(self, event):
+        user_input = self.clippy_reply_entry.get("1.0", "end-1c").strip()
+        if user_input == "reply...":
+            user_input = ""
+        self._dismiss_clippy_reply_entry()
+        self.btn_frame.pack_forget()
+        self.awaiting_offer = False
+
+        if not user_input:
+            self.awake = False
+            self.is_idling = True
+            self.change_state("sleep", "*Fine.*")
+            return "break"
+
+        self.agentic_task = user_input
+        self.change_state("idle", "Thinking...")
+        self._capture_screenshot(lambda img: self._classify_input(img, user_input))
+        return "break"
 
     def _handle_normal_error(self, e):
         print(f"LLM Error: {e}")
@@ -967,6 +1026,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         return "run_E"
 
     def action_approved(self):
+        self._dismiss_clippy_reply_entry()
         self.awaiting_offer = False
         self.btn_frame.pack_forget()
         task = self.pending_offer_task or self.pending_offer
@@ -980,6 +1040,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         self.root.after(1000, self.agentic_step)
 
     def action_denied(self):
+        self._dismiss_clippy_reply_entry()
         self.awaiting_offer = False
         self.awake = False
         self.btn_frame.pack_forget()
@@ -1209,7 +1270,7 @@ def create_jiji():
     print(f"\n{'='*50}")
     print(f"[START] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
-    print("Jiji V1.25 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
+    print("Jiji V1.26 online. ESC to abort task or kill. Left click to wake up. Left drag to move. Right click to give task.")
 
     # Load and apply settings before anything else
     apply_settings(load_settings())
