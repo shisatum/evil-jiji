@@ -508,11 +508,11 @@ class JijiApp:
         context_line = f'You just said to the user: "{context}"\n' if context else ""
         prompt = (
             f'You are Jiji, the sardonic black cat. {context_line}'
-            f'The user replied: "{user_input}"\n'
-            "Classify as ONE of:\n"
-            '- TASK (open/close app, click, type, automate the desktop): {"type": "task"}\n'
-            '- CHAT (anything else — questions, corrections, acknowledgments, conversation): {"type": "chat", "text": "sardonic reply, 30 words max"}\n'
-            "Reply with ONLY one JSON object."
+            f'The user said: "{user_input}"\n'
+            "Is the user REQUESTING Jiji to perform a desktop action right now?\n"
+            '- YES — user wants Jiji to do something on the desktop (open/close an app, click, type, search, etc.): {"type": "task"}\n'
+            '- NO — user is talking: correcting, asking a question, acknowledging, chatting, or mentioning software without requesting action: {"type": "chat", "text": "sardonic reply, 30 words max"}\n'
+            "If context is provided above, use it to interpret the user's intent. Reply with ONLY one JSON object."
         )
         self._call_api(prompt, img_str, self._process_classification,
                        self._handle_normal_error, json_mode=True)
