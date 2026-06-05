@@ -968,7 +968,7 @@ Output exactly ONE of these JSON formats — no other keys, no extra text:
         if self.clippy_reply_entry or not self.awaiting_offer:
             return
         self.clippy_reply_entry = tk.Text(
-            self.frame, width=25, height=1, bg="#333333", fg="#aaaaaa",
+            self.frame, width=25, height=3, bg="#333333", fg="#aaaaaa",
             font=("Courier", 10), borderwidth=0, insertbackground="white",
             wrap=tk.WORD)
         self.clippy_reply_entry.insert("1.0", "reply...")
