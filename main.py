@@ -1159,7 +1159,13 @@ class SettingsWindow:
         self.auto_wake_minutes_var = tk.StringVar(value=str(s["auto_wake_minutes"]))
         self.app_launch_delay_var  = tk.StringVar(value=str(s["app_launch_delay"]))
 
+        self._original_settings = self._collect()
         self._build()
+        for var in (self.backend_var, self.groq_key_var, self.groq_model_var,
+                    self.ollama_model_var, self.local_url_var, self.local_model_var,
+                    self.high_res_var, self.auto_wake_var,
+                    self.auto_wake_minutes_var, self.app_launch_delay_var):
+            var.trace_add("write", lambda *_: self._update_dirty_state())
         self._show("Behavior")
 
     def _build(self):
@@ -1170,8 +1176,14 @@ class SettingsWindow:
                   relief=tk.FLAT, padx=10, command=self.win.destroy).pack(side=tk.RIGHT, padx=6)
         tk.Button(bar, text="OK", font=self.FONT, fg=self.FG, bg=self.ACCENT,
                   relief=tk.FLAT, padx=10, command=self._ok).pack(side=tk.RIGHT, padx=2)
-        tk.Button(bar, text="Apply", font=self.FONT, fg=self.FG, bg=self.ENTRY_BG,
-                  relief=tk.FLAT, padx=10, command=self._apply).pack(side=tk.RIGHT, padx=2)
+        self.btn_apply = tk.Button(bar, text="Apply", font=self.FONT, fg=self.FG,
+                                   bg=self.ENTRY_BG, relief=tk.FLAT, padx=10,
+                                   disabledforeground="#666666", command=self._apply,
+                                   state=tk.DISABLED)
+        self.btn_apply.pack(side=tk.RIGHT, padx=2)
+        self.status_label = tk.Label(bar, text="", font=self.FONT, fg="#f0a500",
+                                     bg=self.BG)
+        self.status_label.pack(side=tk.LEFT, padx=10)
 
         # Left nav
         self.nav = tk.Frame(self.win, bg=self.BG_NAV, width=130)
@@ -1298,11 +1310,22 @@ class SettingsWindow:
             "app_launch_delay":    launch_delay,
         }
 
+    def _update_dirty_state(self):
+        dirty = self._collect() != self._original_settings
+        if dirty:
+            self.btn_apply.config(state=tk.NORMAL, bg=self.ACCENT)
+            self.status_label.config(text="⚠ Unsaved changes")
+        else:
+            self.btn_apply.config(state=tk.DISABLED, bg=self.ENTRY_BG)
+            self.status_label.config(text="")
+
     def _apply(self):
         s = self._collect()
         apply_settings(s)
         save_settings(s)
         _log_backend(changed=True)
+        self._original_settings = self._collect()  # mark as clean
+        self._update_dirty_state()
 
     def _ok(self):
         self._apply()
