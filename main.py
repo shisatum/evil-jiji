@@ -530,11 +530,13 @@ class JijiApp:
 
         if classified_as == "answer":
             answer = str(data.get("text", "")).strip().strip('"')
+            print(f"\n[JIJI - ANSWER] \"{answer}\"")
             self.change_state("sit_up", f'"{answer}"')
             self.awaiting_offer = True
             self.root.after(500, self._show_clippy_reply_entry)
         elif classified_as == "correction":
             ack = str(data.get("text", "Fine.")).strip().strip('"')
+            print(f"\n[JIJI - CORRECTION ACK] \"{ack}\"")
             self.change_state("sit_up", f'"{ack}"')
             self.awaiting_offer = True
             self.root.after(500, self._show_clippy_reply_entry)
